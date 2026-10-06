@@ -1,0 +1,33 @@
+# Data and models (never commit)
+data/*
+!data/README.md
+*.pt
+*.pth
+*.ckpt
+*.onnx
+checkpoints/
+runs/
+wandb/
+lightning_logs/
+
+# Location data (keep real coordinates out of the repo)
+*.shp
+*.shx
+*.dbf
+*.prj
+*.geojson
+*.kml
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.ipynb_checkpoints/
+
+# Env / OS
+.env
+.DS_Store
+.vscode/
+.idea/
