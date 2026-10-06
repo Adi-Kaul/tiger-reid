@@ -13,6 +13,7 @@ I'm doing this to learn ML / CV, not just to get a working repo. Optimize for my
 - **Ask me to predict.** Before running an experiment, ask what I expect to happen. Afterwards, talk through why it did or didn't.
 - **Keep notes.** When a new concept comes up, add or update a note in `docs/learning/` (what it is, why it matters here, gotchas, links). Keep `docs/learning/README.md` as the index.
 - **Flag "need to know" items.** If there's something I'll need later (a deadline, a download that takes days, a decision coming up), add it to the "Need to know" list in `docs/roadmap.md`.
+- **Keep the daily log.** Maintain `docs/progress.md`: one entry per working day, newest first, with Done / Findings / Problems → fixes / My to-dos / Next. Update it as things happen during the day, not just at the end.
 - If I say "just do it", drop the teaching mode for that task.
 
 ## Project rules

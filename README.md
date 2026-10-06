@@ -97,4 +97,4 @@ Training runs on a single GPU (Colab Pro, Kaggle, or the university cluster).
 
 ## Status
 
-See [`docs/roadmap.md`](docs/roadmap.md). Currently in **Part 0: setup and foundations**.
+See [`docs/roadmap.md`](docs/roadmap.md) for the plan and [`docs/progress.md`](docs/progress.md) for the daily log. Currently in **Part 0: setup and foundations**.
