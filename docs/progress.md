@@ -17,7 +17,9 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 - The re-ID **test set has no ID labels** on LILA → we'll build our own query/gallery/open-set splits from the labeled train set.
 - **No clip/video info** anywhere: CSV is just `id, filename`; keypoint JSON is pose only. Sorted filenames share an ID with their neighbor only 1.3% of the time (≈ random), so filenames are shuffled.
 - **1,887 labeled images** out of 3,392 in the train folder. The other 1,505 have no ID or keypoints, so we're ignoring them.
-- **107 IDs** (range 0–274), not 92. Likely related to left/right flanks; to confirm in the paper.
+- **107 IDs = 107 "entities", not tigers.** Paper: an entity is one *side* of one tiger, because left and right flanks have different stripes and wild cameras rarely see both. Full re-ID set = 182 entities from 92 tigers (3,649 boxes); LILA's labeled train release has 107 of them (1,887 boxes), the rest are in the unlabeled test set.
+- We **can't tell which two entities are the same tiger**, so "hold out individuals" really means "hold out entities": a tiger's other flank may still be in training. Fine for stripe matching (different patterns), but say so in the report.
+- Paper says original crops were named with camera, shot and frame IDs; the LILA release renamed them to plain numbers, which is why clip info is gone. Frames were also sampled 1-in-10 and filtered for being "significantly different", so near-duplicates may be milder than feared.
 - Data dates to 2019 because ATRW was released for the CVWC 2019 challenge; benchmarks stay frozen on purpose.
 
 **Problems → fixes**
@@ -25,8 +27,8 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 - No clip info for splitting → plan: reconstruct **pseudo-clips** by grouping near-duplicate images within each ID, then split by those.
 
 **My to-dos**
-- [ ] Finish notebook Q1 (confirm 107 + why) and Q2 (min/median/max per ID + plot); write the Findings cell; save to GitHub
-- [ ] Read the ATRW paper (check the 107 vs 92 explanation)
+- [ ] Finish notebook Q1 (write up 107 entities) and Q2 (min/median/max per ID + plot); write the Findings cell; save to GitHub
+- [ ] Read the ATRW paper (Sec. 3 explains entities; 107 vs 92 answered)
 - [ ] Email a wildlife ecology or CV professor
 - [ ] Set up GPU access (cluster account or Kaggle)
 
