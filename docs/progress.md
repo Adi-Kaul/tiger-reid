@@ -37,5 +37,7 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 - [ ] Set up GPU access (cluster account or Kaggle)
 
 **Next**
-- Review notebook answers, then design the splits (pseudo-clips, open-set holdout of ~20% of individuals) and save them to a file.
+- **Open question for me:** what visual clues tell me two photos are from the same video? (Turn that into something measurable → pseudo-clips.)
+- Optional: save the grid as `results/part0_grid.png`, clear notebook outputs before future Colab saves (notebook is 6.5 MB).
+- Then design the splits (pseudo-clips, open-set holdout of ~20% of individuals) and save them to a file.
 - Dataloader skeleton for me to fill in → Part 0 checkpoint (20 tigers × several images).
