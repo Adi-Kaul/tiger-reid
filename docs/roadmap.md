@@ -10,6 +10,8 @@ Things to keep in mind or act on soon. Updated as we go.
 
 - **Start the ATRW download now.** The re-ID part is small (~220 MB); detection images are ~3.4 GB.
 - **ATRW's re-ID test set has no identity labels on LILA.** Only the train annotations (ID ↔ filename CSV) are labeled, so we'll likely build our own query/gallery and open-set splits from the labeled train set. Confirm once downloaded.
+- **No clip info in ATRW re-ID (confirmed Oct 6).** Filenames are shuffled (neighbors share an ID ~1.3% of the time, i.e. random). To split "by clip" we need to reconstruct pseudo-clips by grouping near-duplicate images within each ID.
+- **Only 1,887 of 3,392 train images are labeled** (107 IDs, range 0–274). The other 1,505 have no ID or keypoints; ignore them for supervised training.
 - **License is CC BY-NC-SA 4.0** (non-commercial). Fine for coursework; cite Li et al. 2019 (arXiv:1906.05586).
 - **Get GPU access early.** Colab Pro, Kaggle (free ~30 GPU-hrs/week), or the university cluster. Cluster accounts can take days to approve.
 - **Email a professor this week** (wildlife ecology or CV) about advising / real camera-trap data. Replies take time.
