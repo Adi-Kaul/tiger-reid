@@ -8,7 +8,9 @@ Started: Oct 6, 2026.
 
 Things to keep in mind or act on soon. Updated as we go.
 
-- **Start the ATRW download now.** It's large; if the official link is slow, community mirrors exist.
+- **Start the ATRW download now.** The re-ID part is small (~220 MB); detection images are ~3.4 GB.
+- **ATRW's re-ID test set has no identity labels on LILA.** Only the train annotations (ID ↔ filename CSV) are labeled, so we'll likely build our own query/gallery and open-set splits from the labeled train set. Confirm once downloaded.
+- **License is CC BY-NC-SA 4.0** (non-commercial). Fine for coursework; cite Li et al. 2019 (arXiv:1906.05586).
 - **Get GPU access early.** Colab Pro, Kaggle (free ~30 GPU-hrs/week), or the university cluster. Cluster accounts can take days to approve.
 - **Email a professor this week** (wildlife ecology or CV) about advising / real camera-trap data. Replies take time.
 - **Decide the splits once, in Part 0, and save them to a file.** Every later experiment (baseline, metric learning, open-set) must use the exact same splits or the comparisons mean nothing.
