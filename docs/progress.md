@@ -21,6 +21,7 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 - **107 IDs = 107 "entities", not tigers.** Paper: an entity is one *side* of one tiger, because left and right flanks have different stripes and wild cameras rarely see both. Full re-ID set = 182 entities from 92 tigers (3,649 boxes); LILA's labeled train release has 107 of them (1,887 boxes), the rest are in the unlabeled test set.
 - We **can't tell which two entities are the same tiger**, so "hold out individuals" really means "hold out entities": a tiger's other flank may still be in training. Fine for stripe matching (different patterns), but say so in the report.
 - Paper says original crops were named with camera, shot and frame IDs; the LILA release renamed them to plain numbers, which is why clip info is gone. Frames were also sampled 1-in-10 and filtered for being "significantly different", so near-duplicates may be milder than feared.
+- **Grid of 20 entities × 6 images (Part 0 checkpoint) — what I saw:** most rows look like they come from one video; a few mix two videos. Poses vary a lot: in water, sitting, some views from behind. → Near-duplicates are common, so pseudo-clips are needed; many entities may only have one clip; same video = same background, so the model could cheat on background; water/back views are hard cases for the per-pose breakdown.
 - Data dates to 2019 because ATRW was released for the CVWC 2019 challenge; benchmarks stay frozen on purpose.
 
 **Problems → fixes**
@@ -29,7 +30,8 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 
 **My to-dos**
 - [x] Notebook Q1–Q3 answered
-- [ ] Tidy Findings cell (fill in "skewed", remove leftover hint text) and save notebook to GitHub
+- [x] Part 0 checkpoint: 20-entity grid
+- [ ] Tidy Findings cell + add Observations cell (fill in "skewed", remove leftover hint text) and save notebook to GitHub
 - [ ] Read the ATRW paper (Sec. 3 explains entities; 107 vs 92 answered)
 - [ ] Email a wildlife ecology or CV professor
 - [ ] Set up GPU access (cluster account or Kaggle)
