@@ -16,6 +16,7 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 **Findings**
 - The re-ID **test set has no ID labels** on LILA → we'll build our own query/gallery/open-set splits from the labeled train set.
 - **No clip/video info** anywhere: CSV is just `id, filename`; keypoint JSON is pose only. Sorted filenames share an ID with their neighbor only 1.3% of the time (≈ random), so filenames are shuffled.
+- **Images per entity: min 10, median 13, max 98** (mean ≈ 17.6). Skewed: most entities have 10–15 images, a few have far more. Use a balanced (m-per-class) sampler so big entities don't dominate training.
 - **1,887 labeled images** out of 3,392 in the train folder. The other 1,505 have no ID or keypoints, so we're ignoring them.
 - **107 IDs = 107 "entities", not tigers.** Paper: an entity is one *side* of one tiger, because left and right flanks have different stripes and wild cameras rarely see both. Full re-ID set = 182 entities from 92 tigers (3,649 boxes); LILA's labeled train release has 107 of them (1,887 boxes), the rest are in the unlabeled test set.
 - We **can't tell which two entities are the same tiger**, so "hold out individuals" really means "hold out entities": a tiger's other flank may still be in training. Fine for stripe matching (different patterns), but say so in the report.
@@ -27,7 +28,8 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 - No clip info for splitting → plan: reconstruct **pseudo-clips** by grouping near-duplicate images within each ID, then split by those.
 
 **My to-dos**
-- [ ] Finish notebook Q1 (write up 107 entities) and Q2 (min/median/max per ID + plot); write the Findings cell; save to GitHub
+- [x] Notebook Q1–Q3 answered
+- [ ] Tidy Findings cell (fill in "skewed", remove leftover hint text) and save notebook to GitHub
 - [ ] Read the ATRW paper (Sec. 3 explains entities; 107 vs 92 answered)
 - [ ] Email a wildlife ecology or CV professor
 - [ ] Set up GPU access (cluster account or Kaggle)
