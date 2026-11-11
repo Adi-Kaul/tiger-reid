@@ -7,6 +7,8 @@ Rapid-development mode (since Nov 10, 2026): no due dates, aim for results fast,
 - **ATRW re-ID test set has no identity labels on LILA.** We build our own query/gallery/open-set splits from the 1,887 labeled train images (107 entities).
 - **107 IDs are entities (one flank of one tiger), not tigers.** We can't link the two flanks of one tiger, so "held-out individuals" means held-out entities. Say so in the report.
 - **No clip info in ATRW re-ID.** Filenames are shuffled. Pseudo-clips (near-duplicate groups within an entity) stand in for video clips when splitting.
+- **Every big decision goes in `docs/decisions.md`** (decision, why, alternatives, consequences).
+- **Closed-set test is small (91 images, 47 entities)**: a few points of rank-1 is noise. Run ≥3 seeds for the main models.
 - **Freeze the splits once** (`splits/splits_v1.csv`). Every experiment uses the same file, or the comparisons mean nothing.
 - **Open-set entities never touch training**, including for choosing hyperparameters. Choose the open-set threshold on `openset_val`, report on `openset_test`.
 - **No horizontal flips** in augmentation (mirrors the stripes).
@@ -20,10 +22,10 @@ Rapid-development mode (since Nov 10, 2026): no due dates, aim for results fast,
 - [x] `tiger_reid` installable, `data.load_labeled()`
 - [x] Switch to rapid mode
 
-## Phase 1: Pseudo-clips + frozen splits
-- [ ] Pseudo-clips: thumbnail cosine similarity + connected components; threshold chosen visually and frozen
-- [ ] Splits: 20% entities open-set (half val, half test); known entities split by clip into train/val/test
-- [ ] Leakage tests on the real split file
+## Phase 1: Pseudo-clips + frozen splits ✅
+- [x] Pseudo-clips: thumbnail cosine similarity + connected components; threshold 0.4 frozen (decisions D3–D4)
+- [x] Splits: 20% entities open-set (half val, half test); known entities split by clip into train/val/test (D5–D6)
+- [x] Leakage tests on the real split file
 - **Checkpoint:** `splits/splits_v1.csv` committed, tests green.
 
 ## Phase 2: Evaluation module

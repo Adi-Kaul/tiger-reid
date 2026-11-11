@@ -13,7 +13,10 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 - **Pseudo-clips implemented** (`pseudo_clips.py`: 32×32 mean-centered thumbnails → cosine → connected components within each entity; `assign_pseudo_clips()`), 5 pytest tests. `scripts/make_pseudo_clips.py` sweeps thresholds → `results/pseudo_clips/sweep.csv` + grids.
 - Finding: **raw-pixel cosine is useless** for this: within-entity median 0.885 vs between-entity 0.873. **Mean-centered** separates: 0.38 vs 0.09 (99th pct between = 0.52).
 - Sweep: t=0.4 → 260 clips, 47 entities with 1 clip; t=0.5 → 439 clips, 28 with 1 clip; t≥0.7 → mostly singleton clips (too fine, leaks).
-- Visual check: t=0.5 still splits same-scene frames (entity 27); t=0.4 is better but not perfect, and it chains entity 153's 98 images (day + dark) into one clip, which is the safe direction. Leaning t=0.4; waiting on confirmation.
+- Visual check: t=0.5 still splits same-scene frames (entity 27); t=0.4 is better but not perfect, and it chains entity 153's 98 images (day + dark) into one clip, which is the safe direction. Chose **t=0.4** (see `docs/decisions.md` D4).
+- **New `docs/decisions.md`**: a log of every big decision (D1–D8 so far) with why, alternatives and consequences.
+- **Splits frozen: `splits/splits_v1.csv`** (+ `.json` with settings/counts) via `scripts/make_splits.py`: train 1,379 / val 67 / test 91 / openset_val 221 / openset_test 129 images. `tiger_reid.splits.load_splits()` reads it.
+- `tests/test_splits.py`: on the real file, checks every image appears once, no clip spans two splits, open-set entities are never in known splits, test/val entities have training images, and no test image is >0.4 similar to a same-entity train image. 11/11 tests pass.
 - Made `tiger_reid` importable: added `pyproject.toml` and ran `pip install -e .` in `.venv`. Notebooks can now `from tiger_reid... import ...`.
 - `src/tiger_reid/data.py`: `load_labeled()` returns the 1,887 labeled images (`entity_id`, `filename`, `path`). Checked: 1,887 rows, 107 entities.
 - `src/tiger_reid/pseudo_clips.py`: skeleton for pseudo-clips. **Three TODOs are mine**: `image_features`, `cosine_similarity_matrix`, `group_by_threshold`. `show_clips` (plotting) is done.
@@ -24,18 +27,18 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 - Crops vary a lot in size (≈150–900 px per side), so features must resize to a fixed size before comparing.
 
 **Problems → fixes**
+- First split put the **biggest** clip into test for 2-clip entities (tie in "distinctness"), giving test 236 / val 274 images and starving training. Caught by the toy unit test → rule: the largest clip always stays in train. Re-built v1 (no results existed yet).
 - `import tiger_reid` failed (package not installed) → `pyproject.toml` + editable install.
 
 **My to-dos**
-- [ ] **Decide the re-plan** (see Next)
-- [ ] Before coding: predict how many pseudo-clips a typical entity (~13 images) will have, and what a good threshold looks like
-- [ ] Fill in the 3 TODOs in `pseudo_clips.py`, run them on 3–4 entities in a new notebook `01_pseudo_clips.ipynb`, look at `show_clips` grids
+- [x] Decide the re-plan → rapid mode
+- [x] Choose pseudo-clip threshold → 0.4
+- [ ] Optional: glance at `results/pseudo_clips/*.png` to see what the clips look like
 - [ ] Carry-overs from Oct 6: tidy notebook 00 Findings cell; read ATRW paper Sec. 3; email a professor; GPU access
 
 **Next**
-- Choose and freeze the threshold → pseudo-clips for all 107 entities → save to `data/splits/` (and a small summary table in `results/`).
-- Then design the splits: open-set holdout (~20% of entities), and query/gallery by pseudo-clip.
-- Then the `Dataset` skeleton (mine to fill) → Part 0 closed.
+- Phase 2: `metrics.py` (rank-1/5, mAP, open-set AUROC) + hand-checked unit tests.
+- Phase 3: `ReidDataset`, then the off-the-shelf ResNet50 and SIFT baselines.
 
 ---
 

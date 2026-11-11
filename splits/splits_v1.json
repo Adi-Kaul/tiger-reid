@@ -1,0 +1,30 @@
+{
+  "version": "v1",
+  "pseudo_clip_threshold": 0.4,
+  "seed": 0,
+  "features": "32x32 mean-centered thumbnails, cosine",
+  "openset_frac": 0.2,
+  "test_clip_rule": "least similar clip (decisions D5)",
+  "counts": {
+    "train": {
+      "images": 1379,
+      "entities": 86
+    },
+    "val": {
+      "images": 67,
+      "entities": 27
+    },
+    "test": {
+      "images": 91,
+      "entities": 47
+    },
+    "openset_val": {
+      "images": 221,
+      "entities": 10
+    },
+    "openset_test": {
+      "images": 129,
+      "entities": 11
+    }
+  }
+}

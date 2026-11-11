@@ -11,7 +11,7 @@ Fast, honest results first. Learning is a side effect, not the goal.
 - **Test everything.** Each step gets a pytest test or a check script. Run `pytest -q` + the step's check and show the headline numbers before committing.
 - **Commit and push after every verified step.** One working change per commit, then `git push` to `origin/main`.
 - **Confirm at phase boundaries.** Keep going within a phase; check with me before starting the next one, and whenever a choice affects results (thresholds, split rules, what to drop).
-- **Keep the docs current.** `docs/progress.md`: one entry per working day, newest first (Done / Findings / Problems → fixes / To-dos / Next), updated as things happen. `docs/roadmap.md`: tick off steps, keep "Need to know" current.
+- **Keep the docs current.** `docs/progress.md`: one entry per working day, newest first (Done / Findings / Problems → fixes / To-dos / Next), updated as things happen. `docs/roadmap.md`: tick off steps, keep "Need to know" current. `docs/decisions.md`: log every choice that shapes results (decision, why, alternatives, consequences) so I can explain it later.
 
 ## Project rules
 
