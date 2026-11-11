@@ -18,8 +18,18 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 - Chance on test: **rank-1 1.1%, rank-5 1–4%, mAP 1.5%, AUROC 0.47–0.53**. Matches expectations (≈16 of 1,379 gallery images per entity).
 - **AUROC moves ±0.03 on pure noise** across seeds (only 91 + 129 test images). Small model differences won't be meaningful; use ≥3 seeds.
 
+- **Phase 3 started.** `src/tiger_reid/dataset.py`: `ReidDataset` (labels remapped to 0..K-1), `eval_transform`/`train_transform` (no flips, tested), `extract_embeddings()`, `pick_device()` (mps here). 28/28 tests.
+- `scripts/eval_pretrained.py`: any timm backbone, pooled features, no training. **ResNet50 (ImageNet), 224×224, val: rank-1 37.3%, rank-5 59.7%, mAP 21.9%, AUROC 0.368.** 40 s on mps.
+
+**Findings (Phase 3)**
+- Closed-set: ImageNet features with zero tiger training already find the right entity 37% of the time (chance 1%).
+- **AUROC 0.37 is below chance, and it's a protocol artifact.** Known queries are deliberately the least typical clip of each entity (D5), so they're far from the gallery. Unknowns are *all* images of new entities, mostly typical. Restricting unknowns to images outside each entity's largest clip (same kind of images as the known queries): **AUROC 0.37 → 0.51** (chance, as expected for ImageNet features). Matched unknowns are small: val 46 images / 7 entities, test 19 images / 6 entities.
+
+**Problems → fixes**
+- Open-set protocol is unfair as built → needs a decision (matched unknowns vs all unknowns); asked.
+
 **Next**
-- Phase 3: `ReidDataset` → off-the-shelf ImageNet ResNet50 features → SIFT + RANSAC baseline.
+- Decide the open-set protocol, then the SIFT + RANSAC baseline.
 
 ---
 
