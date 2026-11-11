@@ -4,6 +4,34 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 
 ---
 
+## Nov 10, 2026 (Tue) — Part 0, day 2 (week 6 of the plan)
+
+**Done**
+- Made `tiger_reid` importable: added `pyproject.toml` and ran `pip install -e .` in `.venv`. Notebooks can now `from tiger_reid... import ...`.
+- `src/tiger_reid/data.py`: `load_labeled()` returns the 1,887 labeled images (`entity_id`, `filename`, `path`). Checked: 1,887 rows, 107 entities.
+- `src/tiger_reid/pseudo_clips.py`: skeleton for pseudo-clips. **Three TODOs are mine**: `image_features`, `cosine_similarity_matrix`, `group_by_threshold`. `show_clips` (plotting) is done.
+- New learning note: [`01-pseudo-clips.md`](learning/01-pseudo-clips.md) (which features detect "same video", chaining, how to pick a threshold without labels).
+
+**Findings**
+- **Schedule slip:** 5 weeks since day 1, and Part 0 is still open. The plan has Part 3 starting now; the core freeze is ~Dec 13. Logged in roadmap "Need to know".
+- Crops vary a lot in size (≈150–900 px per side), so features must resize to a fixed size before comparing.
+
+**Problems → fixes**
+- `import tiger_reid` failed (package not installed) → `pyproject.toml` + editable install.
+
+**My to-dos**
+- [ ] **Decide the re-plan** (see Next)
+- [ ] Before coding: predict how many pseudo-clips a typical entity (~13 images) will have, and what a good threshold looks like
+- [ ] Fill in the 3 TODOs in `pseudo_clips.py`, run them on 3–4 entities in a new notebook `01_pseudo_clips.ipynb`, look at `show_clips` grids
+- [ ] Carry-overs from Oct 6: tidy notebook 00 Findings cell; read ATRW paper Sec. 3; email a professor; GPU access
+
+**Next**
+- Choose and freeze the threshold → pseudo-clips for all 107 entities → save to `data/splits/` (and a small summary table in `results/`).
+- Then design the splits: open-set holdout (~20% of entities), and query/gallery by pseudo-clip.
+- Then the `Dataset` skeleton (mine to fill) → Part 0 closed.
+
+---
+
 ## Oct 6, 2026 (Mon) — Part 0, day 1
 
 **Done**

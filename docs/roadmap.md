@@ -8,6 +8,7 @@ Started: Oct 6, 2026.
 
 Things to keep in mind or act on soon. Updated as we go.
 
+- **⚠ Behind schedule (as of Nov 10, week 6).** Still in Part 0; the plan has Part 3 (metric learning) starting this week. Core freeze (end of week 10) is **~Dec 13**, 5 weeks away. Needs a re-plan decision now; see the Nov 10 entry in `progress.md`.
 - **Start the ATRW download now.** The re-ID part is small (~220 MB); detection images are ~3.4 GB.
 - **ATRW's re-ID test set has no identity labels on LILA.** Only the train annotations (ID ↔ filename CSV) are labeled, so we'll likely build our own query/gallery and open-set splits from the labeled train set. Confirm once downloaded.
 - **No clip info in ATRW re-ID (confirmed Oct 6).** Filenames are shuffled (neighbors share an ID ~1.3% of the time, i.e. random). To split "by clip" we need to reconstruct pseudo-clips by grouping near-duplicate images within each ID.

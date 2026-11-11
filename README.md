@@ -91,6 +91,7 @@ A map of where identified tigers are is useful to poachers.
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+pip install -e .        # makes `import tiger_reid` work in notebooks and scripts
 ```
 
 Training runs on a single GPU (Colab Pro, Kaggle, or the university cluster).
