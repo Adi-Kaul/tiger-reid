@@ -1,0 +1,5 @@
+name: resnet50_triplet
+backbone: resnet50
+loss: triplet
+size: [224, 224]
+epochs: 30

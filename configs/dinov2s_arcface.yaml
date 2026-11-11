@@ -1,0 +1,5 @@
+name: dinov2s_arcface
+backbone: vit_small_patch14_dinov2.lvd142m
+loss: arcface
+size: [224, 224]
+epochs: 30
