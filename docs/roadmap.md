@@ -1,83 +1,69 @@
 # Roadmap
 
-Seven parts, 1–3 weeks each. Every part ends with a checkpoint that works on its own, so stopping early still leaves something finished.
-
-Started: Oct 6, 2026.
+Rapid-development mode (since Nov 10, 2026): no due dates, aim for results fast, and test, commit and push after every step. Each phase ends with a checkpoint that stands on its own, so stopping early still leaves something finished.
 
 ## Need to know
 
-Things to keep in mind or act on soon. Updated as we go.
+- **ATRW re-ID test set has no identity labels on LILA.** We build our own query/gallery/open-set splits from the 1,887 labeled train images (107 entities).
+- **107 IDs are entities (one flank of one tiger), not tigers.** We can't link the two flanks of one tiger, so "held-out individuals" means held-out entities. Say so in the report.
+- **No clip info in ATRW re-ID.** Filenames are shuffled. Pseudo-clips (near-duplicate groups within an entity) stand in for video clips when splitting.
+- **Freeze the splits once** (`splits/splits_v1.csv`). Every experiment uses the same file, or the comparisons mean nothing.
+- **Open-set entities never touch training**, including for choosing hyperparameters. Choose the open-set threshold on `openset_val`, report on `openset_test`.
+- **No horizontal flips** in augmentation (mirrors the stripes).
+- **License CC BY-NC-SA 4.0.** Cite Li et al. 2019 (arXiv:1906.05586).
+- Compute: local Mac `mps` is enough for this dataset size; Colab if training gets slow.
+- Still open from Oct 6 (optional now): email a professor about wild camera-trap data.
 
-- **⚠ Behind schedule (as of Nov 10, week 6).** Still in Part 0; the plan has Part 3 (metric learning) starting this week. Core freeze (end of week 10) is **~Dec 13**, 5 weeks away. Needs a re-plan decision now; see the Nov 10 entry in `progress.md`.
-- **Start the ATRW download now.** The re-ID part is small (~220 MB); detection images are ~3.4 GB.
-- **ATRW's re-ID test set has no identity labels on LILA.** Only the train annotations (ID ↔ filename CSV) are labeled, so we'll likely build our own query/gallery and open-set splits from the labeled train set. Confirm once downloaded.
-- **No clip info in ATRW re-ID (confirmed Oct 6).** Filenames are shuffled (neighbors share an ID ~1.3% of the time, i.e. random). To split "by clip" we need to reconstruct pseudo-clips by grouping near-duplicate images within each ID.
-- **Only 1,887 of 3,392 train images are labeled** (107 IDs, range 0–274). The other 1,505 have no ID or keypoints; ignore them for supervised training.
-- **License is CC BY-NC-SA 4.0** (non-commercial). Fine for coursework; cite Li et al. 2019 (arXiv:1906.05586).
-- **Get GPU access early.** Colab Pro, Kaggle (free ~30 GPU-hrs/week), or the university cluster. Cluster accounts can take days to approve.
-- **Email a professor this week** (wildlife ecology or CV) about advising / real camera-trap data. Replies take time.
-- **Decide the splits once, in Part 0, and save them to a file.** Every later experiment (baseline, metric learning, open-set) must use the exact same splits or the comparisons mean nothing.
-- **Hold out the open-set individuals from day one.** If those ~20% of tigers leak into any training run, the open-set numbers are invalid.
-- **Week 10 is the freeze.** Core results are final by then; stretch work only after.
+## Phase 0: Setup ✅ mostly
+- [x] Repo, docs, download script, ATRW re-ID downloaded
+- [x] Exploration notebook + 20-entity grid
+- [x] `tiger_reid` installable, `data.load_labeled()`
+- [x] Switch to rapid mode
 
-## Part 0 — Setup and foundations (week 1)
+## Phase 1: Pseudo-clips + frozen splits
+- [ ] Pseudo-clips: thumbnail cosine similarity + connected components; threshold chosen visually and frozen
+- [ ] Splits: 20% entities open-set (half val, half test); known entities split by clip into train/val/test
+- [ ] Leakage tests on the real split file
+- **Checkpoint:** `splits/splits_v1.csv` committed, tests green.
 
-- **Learn:** PyTorch tensors, `Dataset` / `DataLoader`, a training loop ([PyTorch tutorials](https://pytorch.org/tutorials/beginner/basics/intro.html)).
-- **Build:** Download ATRW, write a dataloader, display crops grouped by tiger ID.
-- **Checkpoint:** A notebook showing 20 tigers with several images each.
+## Phase 2: Evaluation module
+- [ ] Rank-1/5, mAP, open-set AUROC + unit tests
+- **Checkpoint:** one `evaluate()` used by every method.
 
-This week:
-- [x] Set up the repo
-- [ ] Set up a GPU environment
-- [ ] Download ATRW and confirm the re-ID split loads
-- [ ] Read the ATRW paper and one recent tiger re-ID paper (e.g. a transformer-based follow-up)
-- [ ] Run MegaDetector on 50 ATRW frames to see crop quality
-- [ ] Email one wildlife ecology or CV professor about advising or data access
+## Phase 3: Baselines
+- [ ] `ReidDataset`
+- [ ] Off-the-shelf ImageNet ResNet50 features (no training)
+- [ ] SIFT + RANSAC matcher
+- **Checkpoint:** baseline rows in `results/results.csv`.
 
-## Part 1 — CNNs and detection (weeks 2–3)
+## Phase 4: Metric learning (core)
+- [ ] Embedding model (timm backbone → 512-d normalized)
+- [ ] Training script + configs; smoke test
+- [ ] Runs: ResNet50 ArcFace, ResNet50 triplet, ViT/DINOv2 ArcFace, MegaDescriptor
+- **Checkpoint:** closed-set table vs. baselines.
 
-- **Learn:** Convolutional networks, transfer learning, what an object detector outputs ([CS231n notes](https://cs231n.github.io/)).
-- **Build:** Run MegaDetector on ATRW frames. Fine-tune a pretrained ResNet as a plain classifier over the known tigers.
-- **Checkpoint:** Detection recall + classifier test accuracy. You'll see why plain classification can't handle new tigers.
+## Phase 5: Open-set + robustness
+- [ ] Threshold on `openset_val`; AUROC / TPR / rank-1 on test
+- [ ] Zoo→wild stress test (grayscale, blur, crop); optional augmentation retrain
+- [ ] Per-pose breakdown if keypoints allow
+- **Checkpoint:** core results frozen.
 
-## Part 2 — Classic baseline (weeks 4–5)
+## Phase 6: Detection (short)
+- [ ] MegaDetector on ~100 ATRW detection frames → recall at IoU 0.5
 
-- **Learn:** Keypoints, SIFT descriptors, feature matching, RANSAC ([OpenCV docs](https://docs.opencv.org/4.x/da/df5/tutorial_py_sift_intro.html)).
-- **Build:** A SIFT matcher that ranks gallery images for each query.
-- **Checkpoint:** Rank-1 and mAP for the baseline. This is the number to beat.
+## Phase 7: Map demo
+- [ ] Synthetic camera grid in a park polygon, simulated sightings, Folium per-cell activity
 
-## Part 3 — Metric learning, the core (weeks 6–8)
-
-- **Learn:** Embeddings, triplet loss, ArcFace, hard-negative mining, how rank-1 and mAP are computed.
-- **Build:** Re-ID embedding model with `pytorch-metric-learning`; compare CNN vs ViT backbones. Try MegaDescriptor as a starting backbone.
-- **Checkpoint:** Closed-set results table vs. the Part 2 baseline.
-
-## Part 4 — Open-set and robustness (weeks 9–10)
-
-- **Learn:** Open-set recognition, distance thresholds, ROC / AUROC, data augmentation.
-- **Build:** "New tiger" detection on held-out individuals; flank-aware matching; results by pose and quality. IR / blur augmentations for the zoo-to-wild gap.
-- **Checkpoint:** Core results frozen.
-
-## Part 5 — Mapping (weeks 11–12)
-
-- **Learn:** Coordinate systems, shapefiles, GeoPandas, Folium.
-- **Build:** Synthetic camera grid inside a real park boundary (WDPA), sightings plotted per grid cell.
-- **Checkpoint:** Interactive demo map.
-
-## Part 6 — Write-up + optional stretch (weeks 13–14)
-
-- **Learn (stretch):** Capture-recapture and the `secr` R package.
-- **Build:** 6–8 page workshop-style report (with responsible-use section), slides, optionally SCR density from simulated detections.
-- **Checkpoint:** Final report and presentation.
+## Phase 8: Write-up
+- [ ] 6–8 page report (with responsible use + limitations), slides. SCR optional.
 
 ## Risks
 
 | Risk | Mitigation |
 |---|---|
-| ATRW download / format issues | Start in week 1; community mirrors exist |
-| Re-ID accuracy plateaus | Pretrained wildlife backbone; honest ablations over chasing a number |
-| Open-set threshold unstable | Calibrate on a validation split of held-out individuals; report full ROC |
-| Zoo ≠ wild | IR/blur/crop augmentations; test on any real camera-trap tiger images |
+| Pseudo-clips too coarse/fine | Choose threshold visually, lean toward merging; report it as a limitation |
+| Re-ID accuracy plateaus | Pretrained wildlife backbone (MegaDescriptor); honest ablations over chasing a number |
+| Open-set threshold unstable | Choose on `openset_val`; report the full ROC |
+| Zoo ≠ wild | IR/blur/crop stress test and augmentations |
 | No partner data for the map | Synthetic grid is the default plan |
-| Stretch goals eat core time | Freeze core by end of week 10 |
-| Too long on plumbing | The re-ID model is the project; use existing tools for everything else |
+| Too long on plumbing | The re-ID model is the project; existing tools for everything else |

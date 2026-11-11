@@ -1,35 +1,29 @@
 # CLAUDE.md
 
-Tiger re-identification semester project. See `README.md` for the pipeline and `docs/roadmap.md` for the plan and current part.
+Tiger re-identification semester project. See `README.md` for the pipeline and `docs/roadmap.md` for the plan and current phase.
 
-## The main rule: this is a learning project
+## Working mode: rapid development (since Nov 10, 2026)
 
-I'm doing this to learn ML / CV, not just to get a working repo. Optimize for my understanding, not for speed.
+Fast, honest results first. Learning is a side effect, not the goal.
 
-- **Explain before coding.** Before writing anything non-trivial, explain the concept in plain terms and why we need it at this step. Keep it short; link a good resource if one exists.
-- **I write the core pieces first.** For the research parts (dataloader, triplet loss, embedding model, rank-1/mAP, open-set threshold), give me a skeleton with TODOs and hints instead of the full solution. Review what I write. Only fill it in if I ask.
-- **Hand-roll once, then use the library.** E.g. write triplet loss in ~10 lines of PyTorch, check it, then switch to `pytorch-metric-learning`.
-- **Plumbing is fair game.** Download scripts, plotting, file I/O, config boilerplate, map styling: just write it, but tell me what it does.
-- **Ask me to predict.** Before running an experiment, ask what I expect to happen. Afterwards, talk through why it did or didn't.
-- **Keep notes.** When a new concept comes up, add or update a note in `docs/learning/` (what it is, why it matters here, gotchas, links). Keep `docs/learning/README.md` as the index.
-- **Flag "need to know" items.** If there's something I'll need later (a deadline, a download that takes days, a decision coming up), add it to the "Need to know" list in `docs/roadmap.md`.
-- **Keep the daily log.** Maintain `docs/progress.md`: one entry per working day, newest first, with Done / Findings / Problems → fixes / My to-dos / Next. Update it as things happen during the day, not just at the end.
-- If I say "just do it", drop the teaching mode for that task.
+- **Claude writes the code**, including the core pieces (splits, losses, model, metrics, open-set threshold). No skeletons-with-TODOs unless I ask.
+- **Explain as we go, briefly.** After each step, 2–4 plain sentences: what was built and why it matters. Add a note in `docs/learning/` only for concepts the report will need (index in `docs/learning/README.md`).
+- **Test everything.** Each step gets a pytest test or a check script. Run `pytest -q` + the step's check and show the headline numbers before committing.
+- **Commit and push after every verified step.** One working change per commit, then `git push` to `origin/main`.
+- **Confirm at phase boundaries.** Keep going within a phase; check with me before starting the next one, and whenever a choice affects results (thresholds, split rules, what to drop).
+- **Keep the docs current.** `docs/progress.md`: one entry per working day, newest first (Done / Findings / Problems → fixes / To-dos / Next), updated as things happen. `docs/roadmap.md`: tick off steps, keep "Need to know" current.
 
 ## Project rules
 
-- **Splits are by individual tiger and by video clip, never by frame.** Frame-level splits leak near-duplicates and inflate scores. Flag any code that breaks this.
+- **Splits are by entity and by (pseudo-)clip, never by frame.** Frame-level splits leak near-duplicates and inflate scores. The frozen split file is `splits/splits_v1.csv`; every experiment uses it. Flag any code that breaks this.
+- **Open-set entities never touch training.**
 - **No real tiger locations in the repo.** Use synthetic or coarsened (≥5 km grid) coordinates. Public maps show activity per grid cell, not per tiger. Real partner data never gets committed.
-- **Never commit data or weights.** `data/`, checkpoints and large outputs are gitignored. Small result tables/plots in `results/` are fine.
-- **Core first.** Core results get frozen by the end of week 10, before any stretch work.
-- **Honest results.** Report ablations and failures as they are; don't tune on the test set.
+- **Never commit data or weights.** `data/`, checkpoints and large outputs are gitignored. Small result tables/plots in `results/` and split files in `splits/` are fine.
+- **Honest results.** Report ablations and failures as they are; don't tune on the test set (use `val` / `openset_val`).
+- **No horizontal-flip augmentation.** It mirrors the stripe pattern into one no real tiger has.
 
 ## Code conventions
 
-- Python 3.11+, PyTorch, `timm` for backbones, `pytorch-metric-learning` for losses/miners.
-- Reusable code goes in `src/tiger_reid/`; notebooks are for exploration and should import from there instead of copy-pasting.
-- Fix random seeds and log configs with every result so numbers are reproducible.
-
-## Git
-
-- Commit each working change with a clear message. Don't push until I say to.
+- Python 3.11+, PyTorch, `timm` for backbones, `pytorch-metric-learning` for losses/miners. Local `.venv` with `pip install -e .`; device is `mps` locally, CUDA on Colab.
+- Reusable code goes in `src/tiger_reid/`, runnable entry points in `scripts/`, tests in `tests/`. Notebooks import from `tiger_reid`.
+- Fix random seeds and log the config with every result (`results/results.csv`) so numbers are reproducible.

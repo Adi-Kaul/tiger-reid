@@ -4,9 +4,12 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 
 ---
 
-## Nov 10, 2026 (Tue) — Part 0, day 2 (week 6 of the plan)
+## Nov 10, 2026 (Tue) — Part 0 → Phase 1
+
+**Mode switch:** due dates dropped; moving to **rapid development**: Claude writes the code, explains briefly, tests + commits + pushes after every step, and checks in at phase boundaries. `CLAUDE.md` and `docs/roadmap.md` rewritten (Phases 0–8, no dates; Part 1 classifier dropped). The TODO skeleton below gets filled in by Claude.
 
 **Done**
+- Switched to rapid mode (CLAUDE.md, roadmap, README status).
 - Made `tiger_reid` importable: added `pyproject.toml` and ran `pip install -e .` in `.venv`. Notebooks can now `from tiger_reid... import ...`.
 - `src/tiger_reid/data.py`: `load_labeled()` returns the 1,887 labeled images (`entity_id`, `filename`, `path`). Checked: 1,887 rows, 107 entities.
 - `src/tiger_reid/pseudo_clips.py`: skeleton for pseudo-clips. **Three TODOs are mine**: `image_features`, `cosine_similarity_matrix`, `group_by_threshold`. `show_clips` (plotting) is done.
