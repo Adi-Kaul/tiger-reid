@@ -34,11 +34,12 @@ Rapid-development mode (since Nov 10, 2026): no due dates, aim for results fast,
 - [x] `eval_sets()`, `log_result()` → `results/results.csv`; chance floor logged
 - **Checkpoint:** one `evaluate()` used by every method.
 
-## Phase 3: Baselines
+## Phase 3: Baselines ✅
 - [x] `ReidDataset`
 - [x] Off-the-shelf ResNet50 + DINOv2 features (no training): test rank-1 42.9% / 50.5%, AUROC ≈ chance (D11)
 - [x] Open-set protocol fixed: matched unknowns + bootstrap CIs (D10)
-- [ ] SIFT + RANSAC matcher
+- [x] SIFT + RANSAC matcher: test rank-1 53.8%, AUROC 0.645 (only baseline above chance on open-set)
+- [x] `results/summary.md` generator
 - **Checkpoint:** baseline rows in `results/results.csv`.
 
 ## Phase 4: Metric learning (core)

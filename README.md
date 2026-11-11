@@ -98,4 +98,4 @@ Training runs on a single GPU (Colab Pro, Kaggle, or the university cluster).
 
 ## Status
 
-See [`docs/roadmap.md`](docs/roadmap.md) for the plan and [`docs/progress.md`](docs/progress.md) for the daily log. Currently in **Phase 3: baselines** (rapid-development mode).
+See [`docs/roadmap.md`](docs/roadmap.md) for the plan and [`docs/progress.md`](docs/progress.md) for the daily log. Currently in **Phase 4: metric learning** (rapid-development mode).

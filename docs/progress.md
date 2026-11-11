@@ -43,8 +43,19 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 - DINOv2 crashed ("input height 224 doesn't match 518") → pass `img_size` to timm so ViT position embeddings get resized.
 - zsh doesn't word-split `$var` in loops → `${sz%x*} ${sz#*x}`.
 
+- **SIFT + RANSAC baseline** (`sift_baseline.py`, `scripts/eval_sift.py`): ≤400 px, 500 keypoints, Lowe ratio 0.75, homography RANSAC 8 px, score = inlier count, distance = −score. Untuned. 3 unit tests on synthetic textures. ~2.3 s per query on 8 cores (val 5 min, test 4 min).
+  - val: rank-1 44.8%, mAP 0.245, AUROC 0.83 [0.75–0.90]
+  - **test: rank-1 53.8% [43–64], rank-5 60.4%, mAP 0.311, AUROC 0.645 [0.55–0.73], AUROC-all 0.60**
+- `scripts/summarize_results.py` → `results/summary.md` (test rows, mean ± std over seeds, CIs). Added `tabulate` to requirements. 33/33 tests.
+
+**Findings (baselines)**
+- Closed-set: SIFT (53.8%), DINOv2 (50.5%) and ResNet50 (42.9%) have **overlapping CIs**, so none is clearly best at rank-1. DINOv2 has the best mAP (0.375 vs 0.311 SIFT).
+- **Open-set: SIFT is the only baseline clearly above chance** (test CI 0.55–0.73 excludes 0.5; val 0.83). It makes sense: an inlier count is an *absolute* "same pattern" score, and a new tiger gets few inliers with everything. Embedding distances from untrained networks have no such meaning.
+- Val→test AUROC gap for SIFT (0.83 → 0.65) is the small-test-set noise D10 warned about.
+- **Bar for Phase 4:** beat rank-1 ~54% / mAP ~0.38 *and* open-set AUROC ~0.65.
+
 **Next**
-- SIFT + RANSAC baseline (last Phase 3 item).
+- Phase 4: metric learning (needs go-ahead).
 
 ---
 
