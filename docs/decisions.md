@@ -75,3 +75,9 @@ Format: **Decision**, **Why**, **Alternatives**, **Consequences**.
 ## D8. No horizontal-flip augmentation (Nov 10, 2026)
 - **Decision:** Never flip images horizontally in training.
 - **Why:** A flipped left flank is a mirrored stripe pattern that no real tiger has. It can look like a *different* entity's flank, which confuses identity.
+
+## D9. Evaluation protocol (Nov 11, 2026)
+- **Decision:** Gallery = train images of the known entities. Query = `test` (or `val` while choosing settings). Unknown = `openset_test` (or `openset_val`). Score with cosine distance for embedding methods; SIFT passes its own distance matrix. Closed-set metrics are rank-1, rank-5 and mAP; open-set uses AUROC of nearest-gallery distance. Every run is appended to `results/results.csv` with its seed, config and git commit.
+- **Why:** One shared scorer, so SIFT, off-the-shelf and trained models are compared on identical terms. The gallery is train-only, so queries and gallery always come from different pseudo-clips (no near-duplicate matches).
+- **Alternatives:** Use val+test images in the gallery as well (a bigger gallery, but it mixes in images that are used as queries).
+- **Consequences:** Chance level is rank-1 ≈ 1.1%, AUROC ≈ 0.5, measured with random embeddings. With 91 known queries and 129 unknowns, **even noise moves AUROC by ±0.03 between seeds**, so main results are reported as mean ± spread over ≥3 seeds.

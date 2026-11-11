@@ -4,6 +4,25 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 
 ---
 
+## Nov 11, 2026 (Wed) — Phase 2: evaluation module
+
+**Done**
+- `src/tiger_reid/metrics.py`: `rank_k`, `mean_ap`, `open_set_auroc`, `evaluate()` (from any distance matrix) and `evaluate_embeddings()` (cosine).
+- `splits.eval_sets(splits, "val"|"test")`: gallery = train, query = val/test, unknown = openset_val/openset_test.
+- `src/tiger_reid/results.py`: `log_result()` appends each run to `results/results.csv` with seed, config and git commit.
+- `tests/test_metrics.py`: hand-worked examples (rank-k, mAP = 0.583, AUROC = 0.5), mAP cross-checked against sklearn, protocol checks on the real splits. **24/24 tests pass.**
+- `scripts/eval_chance.py`: random embeddings through the real pipeline = the chance floor (3 seeds, logged).
+- Learning note [`02-metrics.md`](learning/02-metrics.md); decision D9 (evaluation protocol).
+
+**Findings**
+- Chance on test: **rank-1 1.1%, rank-5 1–4%, mAP 1.5%, AUROC 0.47–0.53**. Matches expectations (≈16 of 1,379 gallery images per entity).
+- **AUROC moves ±0.03 on pure noise** across seeds (only 91 + 129 test images). Small model differences won't be meaningful; use ≥3 seeds.
+
+**Next**
+- Phase 3: `ReidDataset` → off-the-shelf ImageNet ResNet50 features → SIFT + RANSAC baseline.
+
+---
+
 ## Nov 10, 2026 (Tue) — Part 0 → Phase 1
 
 **Mode switch:** due dates dropped; moving to **rapid development**: Claude writes the code, explains briefly, tests + commits + pushes after every step, and checks in at phase boundaries. `CLAUDE.md` and `docs/roadmap.md` rewritten (Phases 0–8, no dates; Part 1 classifier dropped). The TODO skeleton below gets filled in by Claude.

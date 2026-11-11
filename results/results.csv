@@ -1,0 +1,4 @@
+time,method,eval_split,seed,splits,commit,rank1,rank5,mAP,auroc,n_query,n_gallery,n_unknown,config
+2026-11-11T00:01:22,chance (random embeddings),test,0,v1,bc99659,0.011,0.033,0.0155,0.465,91,1379,129,"{""dim"": 128}"
+2026-11-11T00:01:22,chance (random embeddings),test,1,v1,bc99659,0.011,0.011,0.0152,0.5284,91,1379,129,"{""dim"": 128}"
+2026-11-11T00:01:22,chance (random embeddings),test,2,v1,bc99659,0.011,0.044,0.0153,0.5184,91,1379,129,"{""dim"": 128}"

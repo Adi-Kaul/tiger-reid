@@ -76,3 +76,19 @@ def load_splits(version: str = "v1", data_root: Path | None = None) -> pd.DataFr
     root = Path(data_root) if data_root else ATRW
     df["path"] = [root / "atrw_reid_train" / "train" / f for f in df["filename"]]
     return df
+
+
+def eval_sets(splits, stage: str = "test") -> dict:
+    """The three image sets for evaluation.
+
+    gallery = train images of known entities (the "database" of known tigers)
+    query   = `val` or `test` images (known tigers, different clips from the gallery)
+    unknown = `openset_val` or `openset_test` images (tigers not in the gallery)
+
+    Use stage="val" while choosing settings; "test" only for reported numbers.
+    """
+    if stage not in ("val", "test"):
+        raise ValueError(stage)
+    return {"gallery": splits[splits.split == "train"].reset_index(drop=True),
+            "query": splits[splits.split == stage].reset_index(drop=True),
+            "unknown": splits[splits.split == f"openset_{stage}"].reset_index(drop=True)}

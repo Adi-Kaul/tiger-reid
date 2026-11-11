@@ -28,8 +28,9 @@ Rapid-development mode (since Nov 10, 2026): no due dates, aim for results fast,
 - [x] Leakage tests on the real split file
 - **Checkpoint:** `splits/splits_v1.csv` committed, tests green.
 
-## Phase 2: Evaluation module
-- [ ] Rank-1/5, mAP, open-set AUROC + unit tests
+## Phase 2: Evaluation module ✅
+- [x] Rank-1/5, mAP, open-set AUROC + unit tests (`metrics.py`, D9)
+- [x] `eval_sets()`, `log_result()` → `results/results.csv`; chance floor logged
 - **Checkpoint:** one `evaluate()` used by every method.
 
 ## Phase 3: Baselines
