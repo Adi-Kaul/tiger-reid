@@ -12,8 +12,8 @@ Short notes on each concept as it comes up: what it is, why it matters for this 
 | 1 | Transfer learning / fine-tuning | todo |
 | 1 | What a detector outputs (boxes, confidence, NMS) | todo |
 | 2 | SIFT + RANSAC | todo |
-| 3 | Embeddings and triplet loss | todo |
-| 3 | ArcFace | todo |
+| 4 | [Embeddings and triplet loss](03-embeddings-triplet.md) | done |
+| 4 | [ArcFace](04-arcface.md) | done |
 | 4 | Open-set recognition and AUROC | todo |
 | 5 | Coordinate systems and shapefiles | todo |
 | 6 | Spatial capture-recapture | todo |
