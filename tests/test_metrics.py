@@ -78,8 +78,9 @@ def test_evaluate_embeddings_end_to_end():
     g = np.array([[1, 0, 0], [0.9, 0.1, 0], [0, 1, 0]], dtype=float)
     q = np.array([[1, 0.05, 0], [0.05, 1, 0]], dtype=float)
     unk = np.array([[0, 0, 1]], dtype=float)
-    m = evaluate_embeddings(q, Q, g, G, unk)
-    assert m["rank1"] == 1.0 and m["mAP"] == 1.0 and m["auroc"] == 1.0
+    m = evaluate_embeddings(q, Q, g, G, unk, unk)
+    assert m["rank1"] == 1.0 and m["mAP"] == 1.0 and m["auroc"] == 1.0 == m["auroc_all"]
+    assert m["rank1_lo"] == m["rank1_hi"] == 1.0
     assert (m["n_query"], m["n_gallery"], m["n_unknown"]) == (2, 3, 1)
     assert "auroc" not in evaluate(D, Q, G)
 
@@ -93,6 +94,13 @@ def test_eval_sets_on_real_splits():
         assert set(e["query"].entity_id) <= set(e["gallery"].entity_id)          # closed set
         assert not set(e["unknown"].entity_id) & set(e["gallery"].entity_id)     # open set
         assert not set(e["query"].clip_id) & set(e["gallery"].clip_id)           # no clip leak
+        assert set(e["unknown"].filename) < set(e["unknown_all"].filename)
+        # matched unknowns never come from an entity's largest clip
+        sizes = e["unknown_all"].groupby("clip_id").size()
+        for ent, g in e["unknown"].groupby("entity_id"):
+            all_clips = e["unknown_all"][e["unknown_all"].entity_id == ent].clip_id.unique()
+            assert sizes[g.clip_id.iloc[0]] <= sizes[all_clips].max()
+            assert sizes[all_clips].idxmax() not in set(g.clip_id) or (sizes[all_clips] == sizes[all_clips].max()).sum() > 1
 
 
 def test_log_result(tmp_path):
@@ -103,3 +111,22 @@ def test_log_result(tmp_path):
     log_result("b", "test", {"rank1": 0.5, "mAP": 0.4}, path=p)
     df = pd.read_csv(p)
     assert list(df.method) == ["a", "b"] and df.rank1[0] == 0.1235
+
+
+def test_bootstrap_ci_brackets_point_estimate():
+    from tiger_reid.metrics import bootstrap_ci
+    rng = np.random.default_rng(1)
+    g = rng.integers(0, 5, 50); q = rng.integers(0, 5, 40)
+    d, du = rng.random((40, 50)), rng.random((30, 50)) + 0.1
+    ci = bootstrap_ci(d, q, g, du, n_boot=300)
+    r1 = rank_k(d, q, g)["rank1"]; au = open_set_auroc(d, du)
+    assert ci["rank1_lo"] <= r1 <= ci["rank1_hi"]
+    assert ci["auroc_lo"] <= au <= ci["auroc_hi"]
+    assert ci["auroc_hi"] - ci["auroc_lo"] > 0.05      # small sets -> wide interval
+
+
+def test_largest_clip_mask():
+    import pandas as pd
+    from tiger_reid.splits import largest_clip_mask
+    df = pd.DataFrame({"entity_id": [1, 1, 1, 2, 2], "clip_id": ["1_0", "1_1", "1_1", "2_0", "2_1"]})
+    assert list(largest_clip_mask(df)) == [False, True, True, True, False]

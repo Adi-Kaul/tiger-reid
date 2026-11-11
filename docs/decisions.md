@@ -81,3 +81,14 @@ Format: **Decision**, **Why**, **Alternatives**, **Consequences**.
 - **Why:** One shared scorer, so SIFT, off-the-shelf and trained models are compared on identical terms. The gallery is train-only, so queries and gallery always come from different pseudo-clips (no near-duplicate matches).
 - **Alternatives:** Use val+test images in the gallery as well (a bigger gallery, but it mixes in images that are used as queries).
 - **Consequences:** Chance level is rank-1 ≈ 1.1%, AUROC ≈ 0.5, measured with random embeddings. With 91 known queries and 129 unknowns, **even noise moves AUROC by ±0.03 between seeds**, so main results are reported as mean ± spread over ≥3 seeds.
+
+## D10. Open-set AUROC uses matched unknowns; all-unknowns reported second; bootstrap CIs (Nov 11, 2026)
+- **Decision:** The primary `auroc` uses open-set images **outside each new entity's largest clip** (`eval_sets()["unknown"]`: 46 val / 19 test images). `auroc_all` (every open-set image) is reported second. Every evaluation also reports 95% bootstrap CIs for rank-1 and AUROC.
+- **Why:** Known-tiger queries are each entity's least typical clip (D5): close-ups, dark frames, odd angles, all far from the gallery. With *all* new-tiger images as unknowns (mostly typical shots), known tigers look "newer" than new tigers. ResNet50 got AUROC **0.37, below chance**. Matching the unknowns to the same kind of image gives **0.51**. The comparison has to be like-for-like.
+- **Alternatives:** All unknowns only (more images but biased against every model); change D5 to random test clips (more leakage risk).
+- **Consequences:** The primary test AUROC rests on **19 images from 6 entities**, so it's very noisy: even random embeddings span roughly 0.28–0.66 (95% CI). Open-set claims need CIs and multiple seeds, and only big differences count. Old `results.csv` rows (old protocol) were deleted and re-run.
+
+## D11. Off-the-shelf baselines: ResNet50 and DINOv2 ViT-S at 224×224 (Nov 11, 2026)
+- **Decision:** Two untrained baselines: ImageNet ResNet50 and self-supervised DINOv2 ViT-S/14, pooled features + cosine, 224×224 input.
+- **Why 224×224:** On val, ResNet50 at 224×224 / 224×448 / 288×576 had overlapping CIs; we choose by **val mAP** (the most stable metric): 0.219 / 0.192 / 0.212 → 224×224.
+- **Why DINOv2 too:** a stronger "free" bar. A trained model must beat the best thing you get without training, not just ImageNet.

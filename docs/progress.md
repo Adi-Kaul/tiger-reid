@@ -25,11 +25,26 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 - Closed-set: ImageNet features with zero tiger training already find the right entity 37% of the time (chance 1%).
 - **AUROC 0.37 is below chance, and it's a protocol artifact.** Known queries are deliberately the least typical clip of each entity (D5), so they're far from the gallery. Unknowns are *all* images of new entities, mostly typical. Restricting unknowns to images outside each entity's largest clip (same kind of images as the known queries): **AUROC 0.37 → 0.51** (chance, as expected for ImageNet features). Matched unknowns are small: val 46 images / 7 entities, test 19 images / 6 entities.
 
+- **Decided (D10):** primary AUROC on matched unknowns, `auroc_all` second, 95% bootstrap CIs on rank-1 and AUROC. Implemented in `eval_sets()` / `evaluate()`; 30/30 tests. Cleared and re-ran `results.csv` under the new protocol.
+- Chance (test, 3 seeds): matched AUROC 0.41–0.52 with **CIs spanning ~0.28–0.66**: the open-set test is very noisy (19 images).
+- Input size on val (ResNet50, chosen by mAP): 224×224 0.219, 224×448 0.192, 288×576 0.212 → 224×224 (D11).
+- **Off-the-shelf baselines, test (95% CI):**
+
+  | model (no training) | rank-1 | rank-5 | mAP | AUROC (matched) | AUROC (all) |
+  |---|---|---|---|---|---|
+  | chance | 1.1% | 1–4% | 1.5% | ~0.5 | ~0.5 |
+  | ResNet50 ImageNet | 42.9% [33–53] | 62.6% | 0.304 | 0.63 [0.49–0.75] | 0.51 |
+  | DINOv2 ViT-S/14 | 50.5% [40–62] | 61.5% | 0.375 | 0.53 [0.41–0.67] | 0.57 |
+
+- Takeaway: untrained features already match ~half the queries (they pick up scene/pose/coat too), but **can't tell a new tiger from a known one** (AUROC ≈ chance). That gap is what metric learning has to close.
+
 **Problems → fixes**
-- Open-set protocol is unfair as built → needs a decision (matched unknowns vs all unknowns); asked.
+- Open-set protocol was unfair as built → matched unknowns (D10).
+- DINOv2 crashed ("input height 224 doesn't match 518") → pass `img_size` to timm so ViT position embeddings get resized.
+- zsh doesn't word-split `$var` in loops → `${sz%x*} ${sz#*x}`.
 
 **Next**
-- Decide the open-set protocol, then the SIFT + RANSAC baseline.
+- SIFT + RANSAC baseline (last Phase 3 item).
 
 ---
 

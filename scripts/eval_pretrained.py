@@ -13,7 +13,7 @@ import timm
 import torch
 
 from tiger_reid.dataset import eval_transform, extract_embeddings, pick_device
-from tiger_reid.metrics import evaluate_embeddings
+from tiger_reid.metrics import evaluate_sets
 from tiger_reid.results import log_result
 from tiger_reid.splits import eval_sets, load_splits
 
@@ -27,7 +27,8 @@ def main():
 
     torch.manual_seed(0)
     device = pick_device()
-    model = timm.create_model(args.model, pretrained=True, num_classes=0)   # pooled features
+    kw = {"img_size": tuple(args.size)} if "vit" in args.model else {}   # ViTs: resize pos. embeddings
+    model = timm.create_model(args.model, pretrained=True, num_classes=0, **kw)   # pooled features
     cfg = model.pretrained_cfg
     from torchvision import transforms as T
     tf = T.Compose([T.Resize(tuple(args.size)), T.ToTensor(),
@@ -36,8 +37,7 @@ def main():
     sets = eval_sets(load_splits(), args.stage)
     t0 = time.time()
     emb = {k: extract_embeddings(model, v, tf, device) for k, v in sets.items()}
-    m = evaluate_embeddings(emb["query"], sets["query"].entity_id.values, emb["gallery"],
-                            sets["gallery"].entity_id.values, emb["unknown"])
+    m = evaluate_sets(emb, sets)
     config = {"model": args.model, "size": args.size, "pretrained": cfg.get("hf_hub_id") or cfg.get("tag"),
               "features": "pooled, no training", "distance": "cosine"}
     log_result(f"pretrained {args.model}", args.stage, m, config, seed=0)

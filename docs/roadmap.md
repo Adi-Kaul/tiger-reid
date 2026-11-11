@@ -8,6 +8,7 @@ Rapid-development mode (since Nov 10, 2026): no due dates, aim for results fast,
 - **107 IDs are entities (one flank of one tiger), not tigers.** We can't link the two flanks of one tiger, so "held-out individuals" means held-out entities. Say so in the report.
 - **No clip info in ATRW re-ID.** Filenames are shuffled. Pseudo-clips (near-duplicate groups within an entity) stand in for video clips when splitting.
 - **Every big decision goes in `docs/decisions.md`** (decision, why, alternatives, consequences).
+- **Open-set test is tiny (19 matched unknown images, 6 entities)**: AUROC CIs are ~±0.13. Only large differences count.
 - **Closed-set test is small (91 images, 47 entities)**: a few points of rank-1 is noise. Run ≥3 seeds for the main models.
 - **Freeze the splits once** (`splits/splits_v1.csv`). Every experiment uses the same file, or the comparisons mean nothing.
 - **Open-set entities never touch training**, including for choosing hyperparameters. Choose the open-set threshold on `openset_val`, report on `openset_test`.
@@ -34,8 +35,9 @@ Rapid-development mode (since Nov 10, 2026): no due dates, aim for results fast,
 - **Checkpoint:** one `evaluate()` used by every method.
 
 ## Phase 3: Baselines
-- [ ] `ReidDataset`
-- [ ] Off-the-shelf ImageNet ResNet50 features (no training)
+- [x] `ReidDataset`
+- [x] Off-the-shelf ResNet50 + DINOv2 features (no training): test rank-1 42.9% / 50.5%, AUROC ≈ chance (D11)
+- [x] Open-set protocol fixed: matched unknowns + bootstrap CIs (D10)
 - [ ] SIFT + RANSAC matcher
 - **Checkpoint:** baseline rows in `results/results.csv`.
 

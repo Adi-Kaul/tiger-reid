@@ -1,5 +1,10 @@
-time,method,eval_split,seed,splits,commit,rank1,rank5,mAP,auroc,n_query,n_gallery,n_unknown,config
-2026-11-11T00:01:22,chance (random embeddings),test,0,v1,bc99659,0.011,0.033,0.0155,0.465,91,1379,129,"{""dim"": 128}"
-2026-11-11T00:01:22,chance (random embeddings),test,1,v1,bc99659,0.011,0.011,0.0152,0.5284,91,1379,129,"{""dim"": 128}"
-2026-11-11T00:01:22,chance (random embeddings),test,2,v1,bc99659,0.011,0.044,0.0153,0.5184,91,1379,129,"{""dim"": 128}"
-2026-11-11T00:10:16,pretrained resnet50,val,0,v1,9c54860,0.3731,0.597,0.219,0.3684,67,1379,221,"{""distance"": ""cosine"", ""features"": ""pooled, no training"", ""model"": ""resnet50"", ""pretrained"": ""timm/resnet50.a1_in1k"", ""size"": [224, 224]}"
+time,method,eval_split,seed,splits,commit,rank1,rank5,mAP,auroc,auroc_all,rank1_lo,rank1_hi,auroc_lo,auroc_hi,n_query,n_gallery,n_unknown,config
+2026-11-11T00:27:01,chance (random embeddings),test,0,v1,53d6f80,0.011,0.033,0.0155,0.413,0.504,0.0,0.033,0.2828,0.5523,91,1379,19,"{""dim"": 128}"
+2026-11-11T00:27:02,chance (random embeddings),test,1,v1,53d6f80,0.011,0.011,0.0152,0.5119,0.5341,0.0,0.033,0.3799,0.6322,91,1379,19,"{""dim"": 128}"
+2026-11-11T00:27:02,chance (random embeddings),test,2,v1,53d6f80,0.011,0.044,0.0153,0.5147,0.526,0.0,0.033,0.3759,0.6617,91,1379,19,"{""dim"": 128}"
+2026-11-11T00:27:38,pretrained resnet50,val,0,v1,53d6f80,0.3731,0.597,0.219,0.5055,0.3684,0.2687,0.4776,0.3965,0.6182,67,1379,46,"{""distance"": ""cosine"", ""features"": ""pooled, no training"", ""model"": ""resnet50"", ""pretrained"": ""timm/resnet50.a1_in1k"", ""size"": [224, 224]}"
+2026-11-11T00:28:14,pretrained resnet50,val,0,v1,53d6f80,0.3582,0.5522,0.1923,0.4559,0.2502,0.2534,0.4631,0.352,0.5766,67,1379,46,"{""distance"": ""cosine"", ""features"": ""pooled, no training"", ""model"": ""resnet50"", ""pretrained"": ""timm/resnet50.a1_in1k"", ""size"": [224, 448]}"
+2026-11-11T00:30:23,pretrained resnet50,val,0,v1,53d6f80,0.4776,0.5522,0.2119,0.3858,0.2079,0.3582,0.597,0.2868,0.5088,67,1379,46,"{""distance"": ""cosine"", ""features"": ""pooled, no training"", ""model"": ""resnet50"", ""pretrained"": ""timm/resnet50.a1_in1k"", ""size"": [288, 576]}"
+2026-11-11T00:31:06,pretrained vit_small_patch14_dinov2.lvd142m,val,0,v1,53d6f80,0.5821,0.7463,0.3144,0.5208,0.4824,0.4627,0.7015,0.4169,0.6236,67,1379,46,"{""distance"": ""cosine"", ""features"": ""pooled, no training"", ""model"": ""vit_small_patch14_dinov2.lvd142m"", ""pretrained"": ""timm/vit_small_patch14_dinov2.lvd142m"", ""size"": [224, 224]}"
+2026-11-11T00:31:35,pretrained resnet50,test,0,v1,53d6f80,0.4286,0.6264,0.3036,0.6287,0.5086,0.3297,0.5275,0.4922,0.7542,91,1379,19,"{""distance"": ""cosine"", ""features"": ""pooled, no training"", ""model"": ""resnet50"", ""pretrained"": ""timm/resnet50.a1_in1k"", ""size"": [224, 224]}"
+2026-11-11T00:31:58,pretrained vit_small_patch14_dinov2.lvd142m,test,0,v1,53d6f80,0.5055,0.6154,0.375,0.5304,0.5742,0.3956,0.6154,0.4049,0.6686,91,1379,19,"{""distance"": ""cosine"", ""features"": ""pooled, no training"", ""model"": ""vit_small_patch14_dinov2.lvd142m"", ""pretrained"": ""timm/vit_small_patch14_dinov2.lvd142m"", ""size"": [224, 224]}"

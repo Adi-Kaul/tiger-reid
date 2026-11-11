@@ -78,17 +78,31 @@ def load_splits(version: str = "v1", data_root: Path | None = None) -> pd.DataFr
     return df
 
 
-def eval_sets(splits, stage: str = "test") -> dict:
-    """The three image sets for evaluation.
+def largest_clip_mask(df) -> np.ndarray:
+    """True for rows in their entity's largest pseudo-clip (ties: clip_id order)."""
+    sizes = df.groupby("clip_id").size()
+    largest = (df[["entity_id", "clip_id"]].drop_duplicates()
+               .assign(n=lambda d: d.clip_id.map(sizes))
+               .sort_values(["entity_id", "n", "clip_id"], ascending=[True, False, True])
+               .drop_duplicates("entity_id")["clip_id"])
+    return df["clip_id"].isin(set(largest)).values
 
-    gallery = train images of known entities (the "database" of known tigers)
-    query   = `val` or `test` images (known tigers, different clips from the gallery)
-    unknown = `openset_val` or `openset_test` images (tigers not in the gallery)
+
+def eval_sets(splits, stage: str = "test") -> dict:
+    """The image sets for evaluation (docs/decisions.md D9-D10).
+
+    gallery     = train images of known entities (the "database" of known tigers)
+    query       = `val` or `test` images (known tigers, different clips from the gallery)
+    unknown     = open-set images OUTSIDE each new entity's largest clip: the same
+                  kind of (less typical) images as the known queries -> fair AUROC
+    unknown_all = every image of the open-set entities (secondary, biased low)
 
     Use stage="val" while choosing settings; "test" only for reported numbers.
     """
     if stage not in ("val", "test"):
         raise ValueError(stage)
+    unk_all = splits[splits.split == f"openset_{stage}"].reset_index(drop=True)
     return {"gallery": splits[splits.split == "train"].reset_index(drop=True),
             "query": splits[splits.split == stage].reset_index(drop=True),
-            "unknown": splits[splits.split == f"openset_{stage}"].reset_index(drop=True)}
+            "unknown": unk_all[~largest_clip_mask(unk_all)].reset_index(drop=True),
+            "unknown_all": unk_all}
