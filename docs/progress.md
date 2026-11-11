@@ -6,7 +6,7 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 
 ## ▶ START HERE (handoff for the next session, updated Nov 11)
 
-**Where we are:** Phases 0–3 done and pushed. **Phase 4 (metric learning) is planned but not started. Waiting for the go-ahead.**
+**Where we are:** Phases 0–3 done. **Phase 4 (metric learning) in progress:** `model.py`, `training.py`, `scripts/train.py`, configs and smoke test done (38 tests). 3-epoch sanity run OK (val mAP 0.31 vs 0.22 untrained). Next: full ResNet50+ArcFace run.
 **Mode:** rapid development (see `CLAUDE.md`). Claude writes code, explains briefly, runs `pytest -q`, commits + pushes after each verified step, and asks at phase boundaries.
 **Read first:** [`learning/00-project-story.md`](learning/00-project-story.md) (the whole project in plain words + Phase 4 plan), [`decisions.md`](decisions.md) (D1–D11), `results/summary.md`.
 
@@ -31,9 +31,14 @@ python scripts/summarize_results.py              # -> results/summary.md
 
 ---
 
-## Nov 11, 2026 (Wed) — Phases 2–3: evaluation + baselines
+## Nov 11, 2026 (Wed) — Phases 2–3: evaluation + baselines; Phase 4 started
 
-**Done**
+**Phase 4 (afternoon)**
+- `model.py` (`EmbeddingNet`: timm → Linear → BN → L2, 512-d), `training.py` (ArcFace / triplet+semi-hard miner, `MPerClassSampler` m=4, AdamW + warmup/cosine, early stop on val mAP, guard asserts for train-only / no open-set / no flips), `scripts/train.py`, `configs/*.yaml`, smoke test. Decisions D12–D13. 38/38 tests.
+- **Sanity run** (ResNet50+ArcFace, 3 epochs, val): loss 34.8 → 24.4, val mAP 0.18 → 0.29 → **0.31** (untrained 0.22), rank-5 0.75. Log: `results/train_logs/sanity_resnet50_arcface_3ep.csv`.
+- Speed on the M2: fp32 0.84 s/step (bs 32), bf16 autocast 1.15 s, channels_last 10 s (!) → stay fp32. ~70 s/epoch incl. val pass; first epochs slower (warm-up / memory pressure on 8 GB).
+
+**Done (morning)**
 - **Evaluation module** (`metrics.py`): rank-k, mAP, open-set AUROC, 95% bootstrap CIs; `evaluate()` takes any distance matrix, `evaluate_sets()` takes embeddings. `splits.eval_sets()` builds gallery/query/unknown sets (D9–D10). `results.log_result()` appends runs to `results/results.csv` with seed, config and commit.
 - **Dataset** (`dataset.py`): `ReidDataset`, `eval_transform` / `train_transform` (no flips, tested), `extract_embeddings()`, `pick_device()` (mps).
 - **Baselines:** `scripts/eval_chance.py` (random floor), `scripts/eval_pretrained.py` (any timm model, untrained), `sift_baseline.py` + `scripts/eval_sift.py` (SIFT, ratio 0.75, homography RANSAC, inlier count; untuned; ~2.3 s/query on 8 cores).
