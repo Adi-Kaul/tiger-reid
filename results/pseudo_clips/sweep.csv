@@ -1,0 +1,7 @@
+threshold,clips_total,clips_per_entity_median,entities_1_clip,entities_2_clips,entities_3plus_clips,singleton_clips,biggest_clip_frac_median
+0.35,214,1.0,59,26,22,61,1.0
+0.4,260,2.0,47,26,34,89,0.93
+0.45,328,2.0,35,26,46,137,0.85
+0.5,439,3.0,28,24,55,244,0.75
+0.6,741,5.0,14,13,80,534,0.55
+0.7,1112,9.0,3,6,98,927,0.29

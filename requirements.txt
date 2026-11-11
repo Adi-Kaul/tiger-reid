@@ -9,3 +9,6 @@ pillow
 opencv-python
 scikit-learn
 jupyter
+scipy
+pyyaml
+pytest

@@ -4,8 +4,6 @@ Why: ATRW lost its video/clip info, and frames from one video are near-duplicate
 Splitting by pseudo-clip (not by frame) keeps near-duplicates on the same side of
 the train/test line. See docs/learning/01-pseudo-clips.md.
 
-YOUR PART: the three TODO functions. The plotting helper at the bottom is done.
-
 Pipeline:
     features = image_features(paths)              # one vector per image
     sim      = cosine_similarity_matrix(features)  # N x N, within ONE entity
@@ -17,51 +15,58 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
+from scipy.sparse import csr_matrix
+from scipy.sparse.csgraph import connected_components
 
 
-def image_features(paths: list[Path], size: int = 32) -> np.ndarray:
-    """Return an (N, D) float array: one feature vector per image.
+def image_features(paths: list[Path], size: int = 32, center: bool = True) -> np.ndarray:
+    """Return an (N, size*size*3) array: one tiny-thumbnail vector per image.
 
-    Start with the dumbest thing that could work: a tiny thumbnail.
-      - open each image, convert to RGB
-      - resize to (size, size)  -> throws away fine detail (stripes) and keeps
-        the overall layout: pose, background, lighting. That is exactly
-        what "same video" looks like.
-      - flatten to a vector, scale to [0, 1]
+    A 32x32 thumbnail throws away fine detail (stripes) and keeps the scene
+    layout: pose, background, lighting. That is what "same video" looks like.
 
-    Hint: np.asarray(img, dtype=np.float32) gives (H, W, 3).
-    Later (optional) compare with a pretrained CNN's features and see which one
-    groups better. Don't start there.
+    center=True subtracts each image's mean. Raw pixels are all >= 0, so every
+    pair has cosine ~0.75-0.97 and same/different scenes overlap (checked Nov 10:
+    within-entity median 0.885 vs between 0.873). Centered: 0.38 vs 0.09.
     """
-    # TODO
-    raise NotImplementedError
+    feats = []
+    for p in paths:
+        img = Image.open(p).convert("RGB").resize((size, size), Image.BILINEAR)
+        feats.append(np.asarray(img, dtype=np.float32).ravel() / 255.0)
+    f = np.stack(feats)
+    if center:
+        f = f - f.mean(axis=1, keepdims=True)
+    return f
 
 
 def cosine_similarity_matrix(features: np.ndarray) -> np.ndarray:
-    """Return an (N, N) matrix where [i, j] = cosine similarity of rows i and j.
-
-    Hint: L2-normalize each row (divide by its norm), then one matrix multiply.
-    Sanity checks: diagonal is all 1.0, matrix is symmetric.
-    Question for you: for thumbnail pixels (all >= 0), what's the lowest
-    value this can be? Will that make a threshold easy or hard to pick?
-    """
-    # TODO
-    raise NotImplementedError
+    """(N, N) matrix of cosine similarities between rows."""
+    norms = np.linalg.norm(features, axis=1, keepdims=True)
+    unit = features / np.clip(norms, 1e-12, None)
+    return unit @ unit.T
 
 
 def group_by_threshold(sim: np.ndarray, threshold: float) -> np.ndarray:
-    """Return an (N,) int array of clip ids: images i, j share a clip if they are
-    connected by a chain of pairs with sim > threshold.
+    """(N,) clip ids: i and j share a clip if linked by a chain of pairs with
+    sim > threshold (connected components). Chaining means A~B~C is one clip
+    even when A and C differ, e.g. a tiger walking across the frame."""
+    adjacency = csr_matrix(sim > threshold)
+    _, labels = connected_components(adjacency, directed=False)
+    return labels
 
-    "Chain" matters: if A~B and B~C, then A, B, C are one clip even if A and C
-    are not similar enough on their own (the tiger walked across the frame).
 
-    This is "connected components" of a graph where edges = (sim > threshold).
-    Hint: scipy.sparse.csgraph.connected_components does it in one call, but
-    try writing it yourself first (BFS/DFS over the adjacency matrix, ~10 lines).
-    """
-    # TODO
-    raise NotImplementedError
+def assign_pseudo_clips(df, threshold: float, features: np.ndarray | None = None):
+    """Add a global `clip_id` column ("<entity>_<k>") to a load_labeled() frame.
+    Grouping is done within each entity only."""
+    if features is None:
+        features = image_features(list(df["path"]))
+    clip = np.empty(len(df), dtype=object)
+    for ent, idx in df.groupby("entity_id").indices.items():
+        labels = group_by_threshold(cosine_similarity_matrix(features[idx]), threshold)
+        clip[idx] = [f"{ent}_{k}" for k in labels]
+    out = df.copy()
+    out["clip_id"] = clip
+    return out
 
 
 # ---------------------------------------------------------------- plumbing
