@@ -92,3 +92,15 @@ Format: **Decision**, **Why**, **Alternatives**, **Consequences**.
 - **Decision:** Two untrained baselines: ImageNet ResNet50 and self-supervised DINOv2 ViT-S/14, pooled features + cosine, 224×224 input.
 - **Why 224×224:** On val, ResNet50 at 224×224 / 224×448 / 288×576 had overlapping CIs; we choose by **val mAP** (the most stable metric): 0.219 / 0.192 / 0.212 → 224×224.
 - **Why DINOv2 too:** a stronger "free" bar. A trained model must beat the best thing you get without training, not just ImageNet.
+
+## D12. Embedding model and losses (Nov 11, 2026)
+- **Decision:** `EmbeddingNet` = timm backbone (pooled features) → Linear → BatchNorm → L2-normalize, 512-d. Two losses: **ArcFace** (margin 28.6°, scale 64, pml defaults) and **triplet** (margin 0.2, semi-hard miner).
+- **Why:** A normalized embedding plugs into the same cosine evaluation as the baselines (D9). ArcFace is the standard strong choice for re-ID with few images per class; triplet is the classic metric-learning baseline to compare against. BatchNorm before normalizing is the usual "BNNeck"-style trick that stabilizes ArcFace training.
+- **Alternatives:** Sub-center ArcFace, circle loss, multi-similarity loss (later, if ArcFace plateaus); no projection head (use raw 2048-d features).
+- **Consequences:** ArcFace learns one weight vector per *training* entity; those are thrown away after training, so new tigers still work (we only keep the embedding).
+
+## D13. Training protocol (Nov 11, 2026)
+- **Decision:** `MPerClassSampler` (m=4 images per entity, batch 32 = 8 entities); AdamW (backbone lr 1e-4, head 1e-3, ArcFace weights 1e-2, wd 1e-4); 1-epoch linear warmup then cosine; up to 30 epochs; **early stopping on val mAP** (patience 8, best checkpoint kept). Augmentation = `train_transform()` (crop/scale, ±10° rotation, colour jitter, **no flips**). Test is evaluated **once per final config** (`--eval-test`), never during training. The training script asserts: train split only, no open-set entity, no flip transform.
+- **Why:** Balanced batches guarantee positive pairs and stop entity 153 (98 images) dominating. mAP is the most stable metric on our small val set (D11). Keeping test out of the loop is what makes the test numbers honest.
+- **Alternatives:** Select on val rank-1 (noisier); select on open-set val AUROC (would use open-set entities for model selection, which our rules forbid for training choices beyond the threshold).
+- **Consequences:** Val has only 67 queries, so "best epoch" is itself noisy; we report test for the selected epoch regardless of how it looks.
