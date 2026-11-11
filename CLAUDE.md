@@ -2,6 +2,8 @@
 
 Tiger re-identification semester project. See `README.md` for the pipeline and `docs/roadmap.md` for the plan and current phase.
 
+**At the start of every session, read the "▶ START HERE" block at the top of `docs/progress.md`** (current state, next steps, open questions). Update that block before ending a session.
+
 ## Working mode: rapid development (since Nov 10, 2026)
 
 Fast, honest results first. Learning is a side effect, not the goal.

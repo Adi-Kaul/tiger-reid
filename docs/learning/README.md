@@ -4,6 +4,7 @@ Short notes on each concept as it comes up: what it is, why it matters for this 
 
 | Part | Note | Status |
 |---|---|---|
+| all | [**The project, explained from zero**](00-project-story.md) (start here) | done |
 | 0 | [Re-ID in one page](00-reid-overview.md) | started |
 | 0 | [Near-duplicates and pseudo-clips](01-pseudo-clips.md) | started |
 | 2 | [Metrics: rank-k, mAP, open-set AUROC](02-metrics.md) | done |

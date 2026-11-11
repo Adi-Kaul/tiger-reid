@@ -4,58 +4,66 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 
 ---
 
-## Nov 11, 2026 (Wed) — Phase 2: evaluation module
+## ▶ START HERE (handoff for the next session, updated Nov 11)
+
+**Where we are:** Phases 0–3 done and pushed. **Phase 4 (metric learning) is planned but not started. Waiting for the go-ahead.**
+**Mode:** rapid development (see `CLAUDE.md`). Claude writes code, explains briefly, runs `pytest -q`, commits + pushes after each verified step, and asks at phase boundaries.
+**Read first:** [`learning/00-project-story.md`](learning/00-project-story.md) (the whole project in plain words + Phase 4 plan), [`decisions.md`](decisions.md) (D1–D11), `results/summary.md`.
+
+**Phase 4 to-do, in order:**
+1. `src/tiger_reid/model.py`: timm backbone → linear projection → 512-d L2-normalized embedding.
+2. `scripts/train.py` + `configs/*.yaml`: `pytorch-metric-learning`, `MPerClassSampler` (m=4), ArcFace (or triplet + miner), AdamW, ~30 epochs, `train_transform()` (no flips), early stopping on **val mAP**, seed fixed, checkpoints → `checkpoints/` (gitignored), final eval on test via `evaluate_sets()` + `log_result()`.
+3. `tests/test_train_smoke.py`: 2 batches × 16 images on CPU; loss finite, shapes right.
+4. Runs: ResNet50+ArcFace → ResNet50+triplet → DINOv2-S+ArcFace (`vit_small_patch14_dinov2.lvd142m`, pass `img_size`) → MegaDescriptor → best × 3 seeds → `scripts/summarize_results.py`.
+5. **Before MegaDescriptor:** check whether its pretraining data includes ATRW (likely). If yes, skip it or report separately as contaminated, and log a decision.
+
+**Bar to beat (test):** rank-1 ~54% (SIFT), mAP ~0.38 (DINOv2), AUROC ~0.65 (SIFT). Test CIs are wide (rank-1 ±10 pts, AUROC ±0.1), so only claim clear wins.
+
+**Useful commands:**
+```bash
+source .venv/bin/activate && pytest -q
+python scripts/eval_pretrained.py --model resnet50 --size 224 224 --stage val
+python scripts/eval_sift.py --stage test          # ~5 min
+python scripts/summarize_results.py              # -> results/summary.md
+```
+
+**Still open (optional):** email a professor about wild camera-trap data; tidy notebook 00.
+
+---
+
+## Nov 11, 2026 (Wed) — Phases 2–3: evaluation + baselines
 
 **Done**
-- `src/tiger_reid/metrics.py`: `rank_k`, `mean_ap`, `open_set_auroc`, `evaluate()` (from any distance matrix) and `evaluate_embeddings()` (cosine).
-- `splits.eval_sets(splits, "val"|"test")`: gallery = train, query = val/test, unknown = openset_val/openset_test.
-- `src/tiger_reid/results.py`: `log_result()` appends each run to `results/results.csv` with seed, config and git commit.
-- `tests/test_metrics.py`: hand-worked examples (rank-k, mAP = 0.583, AUROC = 0.5), mAP cross-checked against sklearn, protocol checks on the real splits. **24/24 tests pass.**
-- `scripts/eval_chance.py`: random embeddings through the real pipeline = the chance floor (3 seeds, logged).
-- Learning note [`02-metrics.md`](learning/02-metrics.md); decision D9 (evaluation protocol).
+- **Evaluation module** (`metrics.py`): rank-k, mAP, open-set AUROC, 95% bootstrap CIs; `evaluate()` takes any distance matrix, `evaluate_sets()` takes embeddings. `splits.eval_sets()` builds gallery/query/unknown sets (D9–D10). `results.log_result()` appends runs to `results/results.csv` with seed, config and commit.
+- **Dataset** (`dataset.py`): `ReidDataset`, `eval_transform` / `train_transform` (no flips, tested), `extract_embeddings()`, `pick_device()` (mps).
+- **Baselines:** `scripts/eval_chance.py` (random floor), `scripts/eval_pretrained.py` (any timm model, untrained), `sift_baseline.py` + `scripts/eval_sift.py` (SIFT, ratio 0.75, homography RANSAC, inlier count; untuned; ~2.3 s/query on 8 cores).
+- `scripts/summarize_results.py` → `results/summary.md`.
+- Learning notes: [`02-metrics.md`](learning/02-metrics.md), [`00-project-story.md`](learning/00-project-story.md). Decisions D9–D11.
+- **33/33 tests pass.**
+
+**Results (test, 95% CI)**
+
+| method (no training) | rank-1 | rank-5 | mAP | AUROC (matched) | AUROC (all) |
+|---|---|---|---|---|---|
+| chance (3 seeds) | 1.1% | 1–4% | 1.5% | 0.48 | 0.52 |
+| ResNet50 ImageNet | 42.9% [33–53] | 62.6% | 0.304 | 0.63 [0.49–0.75] | 0.51 |
+| DINOv2 ViT-S/14 | 50.5% [40–62] | 61.5% | 0.375 | 0.53 [0.41–0.67] | 0.57 |
+| SIFT + RANSAC | 53.8% [43–64] | 60.4% | 0.311 | 0.645 [0.55–0.73] | 0.60 |
 
 **Findings**
-- Chance on test: **rank-1 1.1%, rank-5 1–4%, mAP 1.5%, AUROC 0.47–0.53**. Matches expectations (≈16 of 1,379 gallery images per entity).
-- **AUROC moves ±0.03 on pure noise** across seeds (only 91 + 129 test images). Small model differences won't be meaningful; use ≥3 seeds.
-
-- **Phase 3 started.** `src/tiger_reid/dataset.py`: `ReidDataset` (labels remapped to 0..K-1), `eval_transform`/`train_transform` (no flips, tested), `extract_embeddings()`, `pick_device()` (mps here). 28/28 tests.
-- `scripts/eval_pretrained.py`: any timm backbone, pooled features, no training. **ResNet50 (ImageNet), 224×224, val: rank-1 37.3%, rank-5 59.7%, mAP 21.9%, AUROC 0.368.** 40 s on mps.
-
-**Findings (Phase 3)**
-- Closed-set: ImageNet features with zero tiger training already find the right entity 37% of the time (chance 1%).
-- **AUROC 0.37 is below chance, and it's a protocol artifact.** Known queries are deliberately the least typical clip of each entity (D5), so they're far from the gallery. Unknowns are *all* images of new entities, mostly typical. Restricting unknowns to images outside each entity's largest clip (same kind of images as the known queries): **AUROC 0.37 → 0.51** (chance, as expected for ImageNet features). Matched unknowns are small: val 46 images / 7 entities, test 19 images / 6 entities.
-
-- **Decided (D10):** primary AUROC on matched unknowns, `auroc_all` second, 95% bootstrap CIs on rank-1 and AUROC. Implemented in `eval_sets()` / `evaluate()`; 30/30 tests. Cleared and re-ran `results.csv` under the new protocol.
-- Chance (test, 3 seeds): matched AUROC 0.41–0.52 with **CIs spanning ~0.28–0.66**: the open-set test is very noisy (19 images).
-- Input size on val (ResNet50, chosen by mAP): 224×224 0.219, 224×448 0.192, 288×576 0.212 → 224×224 (D11).
-- **Off-the-shelf baselines, test (95% CI):**
-
-  | model (no training) | rank-1 | rank-5 | mAP | AUROC (matched) | AUROC (all) |
-  |---|---|---|---|---|---|
-  | chance | 1.1% | 1–4% | 1.5% | ~0.5 | ~0.5 |
-  | ResNet50 ImageNet | 42.9% [33–53] | 62.6% | 0.304 | 0.63 [0.49–0.75] | 0.51 |
-  | DINOv2 ViT-S/14 | 50.5% [40–62] | 61.5% | 0.375 | 0.53 [0.41–0.67] | 0.57 |
-
-- Takeaway: untrained features already match ~half the queries (they pick up scene/pose/coat too), but **can't tell a new tiger from a known one** (AUROC ≈ chance). That gap is what metric learning has to close.
+- Untrained features already match about half the queries (they capture shape/pose/coat), but the three baselines' rank-1 CIs overlap, so there's no clear winner. DINOv2 has the best mAP.
+- **Only SIFT spots new tigers above chance.** An inlier count is an absolute "same pattern" score; untrained embedding distances have no such meaning. That gap is what metric learning has to close.
+- **Open-set protocol artifact:** with all open-set images as unknowns, ResNet50 AUROC was 0.37 (below chance), because known queries are deliberately atypical (D5) while unknowns are mostly typical. Matched unknowns → 0.51. Fixed (D10), but the matched test set is only **19 images / 6 entities**, so AUROC CIs are ~±0.1 (even random embeddings span 0.28–0.66).
+- Val→test swings are large (SIFT AUROC 0.83 → 0.65): small-sample noise.
+- Input size barely matters for untrained ResNet50 (val mAP 0.219 / 0.192 / 0.212 for 224², 224×448, 288×576) → 224×224 (D11).
 
 **Problems → fixes**
-- Open-set protocol was unfair as built → matched unknowns (D10).
-- DINOv2 crashed ("input height 224 doesn't match 518") → pass `img_size` to timm so ViT position embeddings get resized.
-- zsh doesn't word-split `$var` in loops → `${sz%x*} ${sz#*x}`.
-
-- **SIFT + RANSAC baseline** (`sift_baseline.py`, `scripts/eval_sift.py`): ≤400 px, 500 keypoints, Lowe ratio 0.75, homography RANSAC 8 px, score = inlier count, distance = −score. Untuned. 3 unit tests on synthetic textures. ~2.3 s per query on 8 cores (val 5 min, test 4 min).
-  - val: rank-1 44.8%, mAP 0.245, AUROC 0.83 [0.75–0.90]
-  - **test: rank-1 53.8% [43–64], rank-5 60.4%, mAP 0.311, AUROC 0.645 [0.55–0.73], AUROC-all 0.60**
-- `scripts/summarize_results.py` → `results/summary.md` (test rows, mean ± std over seeds, CIs). Added `tabulate` to requirements. 33/33 tests.
-
-**Findings (baselines)**
-- Closed-set: SIFT (53.8%), DINOv2 (50.5%) and ResNet50 (42.9%) have **overlapping CIs**, so none is clearly best at rank-1. DINOv2 has the best mAP (0.375 vs 0.311 SIFT).
-- **Open-set: SIFT is the only baseline clearly above chance** (test CI 0.55–0.73 excludes 0.5; val 0.83). It makes sense: an inlier count is an *absolute* "same pattern" score, and a new tiger gets few inliers with everything. Embedding distances from untrained networks have no such meaning.
-- Val→test AUROC gap for SIFT (0.83 → 0.65) is the small-test-set noise D10 warned about.
-- **Bar for Phase 4:** beat rank-1 ~54% / mAP ~0.38 *and* open-set AUROC ~0.65.
+- Unfair open-set comparison → matched unknowns + `auroc_all` + bootstrap CIs (D10); old results.csv rows deleted and re-run.
+- DINOv2 crashed ("input height 224 doesn't match 518") → pass `img_size` to timm for ViTs.
+- zsh doesn't word-split `$var` in `for` loops → `${sz%x*} ${sz#*x}`.
 
 **Next**
-- Phase 4: metric learning (needs go-ahead).
+- Phase 4: metric learning (see START HERE).
 
 ---
 
