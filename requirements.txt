@@ -1,7 +1,7 @@
 torch
 torchvision
-timm
-pytorch-metric-learning
+timm==1.0.30
+pytorch-metric-learning==2.9.0
 numpy
 pandas
 matplotlib
