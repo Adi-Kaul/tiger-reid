@@ -4,7 +4,9 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 
 ---
 
-## ▶ START HERE (handoff for the next session, updated Nov 11)
+## ▶ START HERE (handoff for the next session, updated Nov 12)
+
+**Latest (Nov 12, late): B1 `dinov2s_reg` done** (val rank-1 66%, mAP 0.72, AUROC 0.79; best epoch 27/30). Regularization stops memorizing but doesn't help: last-8-epoch mAP ties the plain DINOv2 run (0.72 vs 0.72), rank-1 is ~8 pts lower, AUROC is unchanged. Plain DINOv2-S stays the base. **Open question for the user:** should B2 (336 px) / B3 (ViT-B) keep B1's regularization (as D19 planned) or use the plain settings? The Drive connector is now on adikaul07, so Claude can read run folders directly.
 
 **Where we are:** Phases 0–3 done. **Phase 4 in progress.** Two full runs on Colab T4 (val, seed 0): **ResNet50+ArcFace** rank-1 70%, mAP 0.69, AUROC 0.75; **DINOv2-S+ArcFace (lr 3e-5)** rank-1 **76%**, mAP **0.76**, AUROC 0.76 (best epoch 11, early stop at 19, 12 min). DINOv2 leads on rank-1/mAP, ties on AUROC; one seed and overlapping CIs. Weights in Drive `MyDrive/tiger-reid-runs/`. Notebook in Drive: `colab_train_v4.ipynb` (older copies superseded). **Next (D17):** ResNet50+triplet, then best on val → 3 seeds → `--eval-test` once → SIFT top-k fusion (D16).
 **Improvements on the table (roadmap Phase 4):** fine-tuned DINOv2, SIFT re-ranking/fusion of top-k (SIFT val AUROC 0.83 > trained 0.75), higher input resolution, more epochs (still creeping up at ep 30 when LR hit 0), ≥3 seeds.
@@ -29,7 +31,7 @@ python scripts/summarize_results.py              # -> results/summary.md
 ```
 
 **Wild data (Nov 12):** no public wild tiger re-ID dataset (images + individual IDs) found. Emails sent Nov 12 asking for wild data: Abishek Harihar (Panthera/NCF, Rajaji NP camera-trap DB on GBIF: 305 images, CC BY-NC, no IDs public, image server down), Wenshuo Li (Bristol, used Rajaji data in arXiv 2512.14878), LILA (info@lila.science). Not contacted (no verified address): WhoAmI authors (WCS India / Edinburgh, 32 wild tigers), China NTLNP camera-trap Amur tiger study. Other leads: wild leopard/hyena camera-trap re-ID sets (arXiv 2607.00804) as a zoo→wild proxy; Zenodo 5573206 = 10 years of Indian tiger capture histories (CSV, CC0, locations centred) for the map/SCR part. Any received data stays out of the repo; drop/coarsen coordinates.
-**Account (Nov 12): use adikaul07@gmail.com for everything** (Drive, Colab, Gmail, git). Runs so far live in the umich Drive `MyDrive/tiger-reid-runs/`; new runs go to the adikaul07 Drive (upload `notebooks/colab_train.ipynb` there; separate Colab GPU quota). **Colab GPU quota hit (Nov 12)** on umich: B1 not run yet. Stage A needs `dinov2s_arcface_s0.pt` + Colab `resnet50_arcface_s0.pt` downloaded into `checkpoints/` (the local resnet50 file is the epoch-3 leftover).
+**Account (Nov 12): use adikaul07@gmail.com for everything** (Drive, Colab, Gmail, git). Runs so far live in the umich Drive `MyDrive/tiger-reid-runs/`; new runs go to the adikaul07 Drive (upload `notebooks/colab_train.ipynb` there; separate Colab GPU quota). **Colab GPU quota hit (Nov 12)** on umich; B1 then ran on adikaul07. Stage A needs `dinov2s_arcface_s0.pt` + Colab `resnet50_arcface_s0.pt` downloaded into `checkpoints/` (the local resnet50 file is the epoch-3 leftover).
 **Still open (optional):** tidy notebook 00.
 
 ---
@@ -68,7 +70,21 @@ python scripts/summarize_results.py              # -> results/summary.md
 - Gains over ResNet50 (+6 rank-1, +0.07 mAP) are inside the CIs for one seed; AUROC is a tie. Promising, not yet proven.
 - Problem → fix: exposed GitHub token in a git error (token revoked/replaced); notebook now passes it via a credential helper, and resets a reused runtime to `origin/main` instead of pulling.
 
+**B1 `dinov2s_reg` (D19): DINOv2-S + RandomErasing + crop scale 0.5–1 + drop-path 0.1, seed 0, T4 (adikaul07 Colab), 30 epochs, 19.5 min**
+
+| method (val) | rank-1 | rank-5 | mAP | AUROC | AUROC (all) | best ep | last-8-ep mean mAP / rank-1 / AUROC |
+|---|---|---|---|---|---|---|---|
+| DINOv2-S + ArcFace | 76% [66–85] | 85% | 0.76 | 0.76 [0.68–0.84] | 0.82 | 11 (stop 19) | 0.721 / 73% / 0.78 |
+| **B1 dinov2s_reg** | 66% [54–76] | 78% | 0.72 | 0.79 [0.70–0.86] | 0.78 | 27 of 30 | 0.718 / 65% / 0.79 |
+
+- **Regularization stopped the memorizing** (train loss 1.8 at epoch 30 vs 0.02 at epoch 19) **but didn't improve val.** It learns more slowly (mAP 0.58 vs 0.69 at epoch 8), then **plateaus at ~0.72 from epoch 19**, so more epochs wouldn't help.
+- **The first DINOv2 run's 0.765 was a one-epoch spike.** Averaged over each run's last 8 epochs, mAP is tied (0.721 vs 0.718). B1's curve is smooth, so its number is less inflated by picking the best epoch.
+- **Rank-1 is clearly worse** (−10 pts at the chosen epoch, −8 pts on the last-8 average; flat at 65.7% for the last 10 epochs). Open-set AUROC is +0.03 matched / −0.04 all-unknowns: no real change.
+- By the D13/D19 rule (val mAP), **B1 loses; the plain DINOv2-S config stays the base.** Log: `results/train_logs/dinov2s_reg_s0.csv`; weights in the adikaul07 Drive `MyDrive/tiger-reid-runs/dinov2s_reg_s0_20261112-2346/`.
+- B2/B3 were planned on top of B1's settings; that needs revisiting (open question in START HERE).
+
 **Problems → fixes**
+- Drive connector was on the umich account → switched to adikaul07, so run folders can now be read directly.
 - "Notebook not found" from the GitHub link (private repo) → uploaded the notebook to Drive.
 - pml 3.0 on Colab turned `MPerClassSampler` into a batch sampler (`length_before_new_iter` gone) → pin 2.9.0 + version guard.
 - Drive auth pop-up timed out after training; then the runtime was recycled and the run lost → mount Drive at the start.

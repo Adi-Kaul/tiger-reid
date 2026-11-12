@@ -175,3 +175,4 @@ Format: **Decision**, **Why**, **Alternatives**, **Consequences**.
   - B1 changes only regularization vs the first DINOv2 run (same precision), so it is a clean comparison.
   - B2/B3 also switch to fp16, a small confound noted in the report.
   - Defaults (`drop_path 0`, no erase, scale 0.7–1, fp32) reproduce the earlier runs exactly.
+- **Outcome B1 (Nov 12):** val mAP 0.723 (best epoch 27) vs 0.765 for the plain run, which loses by the selection rule. Over the last 8 epochs, mAP is tied (0.718 vs 0.721), rank-1 is lower (65% vs 73%) and AUROC is about the same (0.79 vs 0.78). The regularization stopped memorization (train loss 1.8 vs 0.02) without improving generalization. The plain DINOv2-S config stays the base. Whether B2/B3 keep these settings is pending the user's call.
