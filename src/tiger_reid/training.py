@@ -67,7 +67,16 @@ def build_loss(cfg: dict, n_classes: int):
     raise ValueError(cfg["loss"])
 
 
+def _check_pml_version():
+    import pytorch_metric_learning as pml
+    if not pml.__version__.startswith("2."):
+        raise RuntimeError(f"pytorch-metric-learning {pml.__version__} found; this code needs 2.x "
+                           "(3.x turned MPerClassSampler into a batch sampler). "
+                           "Run: pip install pytorch-metric-learning==2.9.0")
+
+
 def make_train_loader(train_df: pd.DataFrame, cfg: dict) -> DataLoader:
+    _check_pml_version()
     ds = ReidDataset(train_df, train_transform(tuple(cfg["size"])))
     sampler = MPerClassSampler(ds.labels, m=cfg["m_per_class"], batch_size=cfg["batch_size"],
                                length_before_new_iter=len(ds))
