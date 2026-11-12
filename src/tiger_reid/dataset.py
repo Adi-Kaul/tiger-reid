@@ -35,6 +35,27 @@ def train_transform(size=(224, 224), erase: bool = False, scale=(0.7, 1.0)):
     return T.Compose(tf)
 
 
+class _CornerCrop:
+    """Crop a (frac*H, frac*W) window from one corner (0=TL, 1=TR, 2=BL, 3=BR)."""
+
+    def __init__(self, corner: int, frac: float = 0.9):
+        self.corner, self.frac = corner, frac
+
+    def __call__(self, img):
+        w, h = img.size
+        cw, ch = round(w * self.frac), round(h * self.frac)
+        left = 0 if self.corner in (0, 2) else w - cw
+        top = 0 if self.corner in (0, 1) else h - ch
+        return img.crop((left, top, left + cw, top + ch))
+
+
+def tta_transforms(size=(224, 224), frac: float = 0.9) -> list:
+    """Test-time augmentation views (D18): the full image + 4 corner crops at 90%.
+    No flips (a mirrored stripe pattern is a different tiger)."""
+    base = eval_transform(size)
+    return [base] + [T.Compose([_CornerCrop(c, frac), *base.transforms]) for c in range(4)]
+
+
 class ReidDataset(Dataset):
     """Items are (image_tensor, label, row_index).
 
@@ -77,3 +98,12 @@ def extract_embeddings(model, df: pd.DataFrame, transform=None, device=None,
     for x, _, _ in loader:
         out.append(model(x.to(device)).float().cpu())
     return torch.cat(out).numpy()
+
+
+def extract_embeddings_tta(model, df: pd.DataFrame, size=(224, 224), device=None,
+                           batch_size: int = 64, num_workers: int = 0) -> np.ndarray:
+    """Average L2-normalized embeddings over tta_transforms(), then re-normalize."""
+    views = [extract_embeddings(model, df, tf, device, batch_size, num_workers)
+             for tf in tta_transforms(size)]
+    m = np.mean(views, axis=0)
+    return m / np.clip(np.linalg.norm(m, axis=1, keepdims=True), 1e-12, None)

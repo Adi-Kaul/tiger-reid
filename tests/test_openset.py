@@ -1,0 +1,84 @@
+"""Open-set scoring (D18) on toy data where the right answer is obvious."""
+
+import numpy as np
+import pytest
+from PIL import Image
+from torchvision import transforms as T
+
+from tiger_reid.dataset import tta_transforms
+from tiger_reid.metrics import auroc_from_scores, cosine_distance, open_set_auroc
+from tiger_reid.openset import (centroid_dist, centroid_score, entity_min_dist, margin_score,
+                                nn_score, topk_entities, zscore, zscore_params)
+from tiger_reid.sift_baseline import candidates_from_entities
+
+
+@pytest.fixture
+def toy():
+    """3 gallery entities on separate axes; known queries sit on an axis, unknowns between."""
+    rng = np.random.default_rng(0)
+    axes = np.eye(3, 8)
+    g = np.repeat(axes, 4, axis=0) + 0.05 * rng.standard_normal((12, 8))
+    g_lab = np.repeat([10, 20, 30], 4)
+    known = axes + 0.05 * rng.standard_normal((3, 8))
+    unk = np.stack([axes[0] + axes[1], axes[1] + axes[2], np.eye(8)[5]]) + 0.05 * rng.standard_normal((3, 8))
+    return g, g_lab, known, unk
+
+
+def test_auroc_from_scores_matches_old(toy):
+    g, g_lab, known, unk = toy
+    dk, du = cosine_distance(known, g), cosine_distance(unk, g)
+    assert auroc_from_scores(nn_score(dk), nn_score(du)) == open_set_auroc(dk, du)
+
+
+def test_all_scores_separate_obvious_case(toy):
+    g, g_lab, known, unk = toy
+    dk, du = cosine_distance(known, g), cosine_distance(unk, g)
+    ek, ents = entity_min_dist(dk, g_lab)
+    eu, _ = entity_min_dist(du, g_lab)
+    assert list(ents) == [10, 20, 30]
+    assert auroc_from_scores(nn_score(dk), nn_score(du)) == 1.0
+    assert auroc_from_scores(centroid_score(known, g, g_lab), centroid_score(unk, g, g_lab)) == 1.0
+    # margin: queries between two tigers are ambiguous; the off-axis one is far from all,
+    # so margin alone can miss it -> just check the two "between" unknowns beat every known
+    mk, mu = margin_score(ek), margin_score(eu)
+    assert mu[:2].min() > mk.max()
+
+
+def test_entity_min_dist_and_centroid_shapes(toy):
+    g, g_lab, known, _ = toy
+    d = cosine_distance(known, g)
+    ed, ents = entity_min_dist(d, g_lab)
+    assert ed.shape == (3, 3)
+    assert np.allclose(ed.min(axis=1), d.min(axis=1))
+    cd, _ = centroid_dist(known, g, g_lab)
+    assert cd.shape == (3, 3) and (cd.argmin(axis=1) == [0, 1, 2]).all()
+
+
+def test_margin_sign():
+    ed = np.array([[0.1, 0.9, 0.95], [0.5, 0.52, 0.9]])   # clear winner vs ambiguous
+    m = margin_score(ed)
+    assert m[1] > m[0]
+
+
+def test_topk_candidates():
+    ed = np.array([[0.3, 0.1, 0.2]])
+    top = topk_entities(ed, np.array([10, 20, 30]), k=2)
+    assert list(top[0]) == [20, 30]
+    cand = candidates_from_entities(top, np.array([10, 10, 20, 30, 30]))
+    assert list(cand[0]) == [2, 3, 4]
+
+
+def test_zscore():
+    p = zscore_params([1, 2, 3], [4, 5])
+    z = zscore([1, 2, 3, 4, 5], p)
+    assert abs(z.mean()) < 1e-9 and abs(z.std() - 1) < 1e-9
+
+
+def test_tta_views_no_flips_and_shapes():
+    views = tta_transforms((56, 84))
+    assert len(views) == 5
+    img = Image.new("RGB", (120, 80), (10, 20, 30))
+    for tf in views:
+        assert not any(isinstance(t, (T.RandomHorizontalFlip, T.RandomVerticalFlip))
+                       for t in tf.transforms)
+        assert tuple(tf(img).shape) == (3, 56, 84)

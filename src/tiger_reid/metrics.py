@@ -45,25 +45,33 @@ def mean_ap(dist, q_labels, g_labels) -> float:
     return float(np.mean(aps))
 
 
-def open_set_auroc(dist_known, dist_unknown) -> float:
-    """How well "distance to nearest gallery image" separates new tigers from known
-    ones. 1.0 = every new tiger is farther than every known one; 0.5 = coin flip.
-    Threshold-free: it's the chance a random unknown query is farther than a
-    random known one."""
-    s_known = np.min(dist_known, axis=1)
-    s_unknown = np.min(dist_unknown, axis=1)
+def auroc_from_scores(s_known, s_unknown) -> float:
+    """AUROC for "new tiger" scores (higher = more likely new). 1.0 = every unknown
+    scores above every known query; 0.5 = coin flip."""
     y = np.r_[np.zeros(len(s_known)), np.ones(len(s_unknown))]
     return float(roc_auc_score(y, np.r_[s_known, s_unknown]))
 
 
+def open_set_auroc(dist_known, dist_unknown) -> float:
+    """How well "distance to nearest gallery image" separates new tigers from known
+    ones. 1.0 = every new tiger is farther than every known one; 0.5 = coin flip.
+    Threshold-free: it's the chance a random unknown query is farther than a
+    random known one. (Other scores: tiger_reid.openset + auroc_from_scores.)"""
+    return auroc_from_scores(np.min(dist_known, axis=1), np.min(dist_unknown, axis=1))
+
+
 def bootstrap_ci(dist_known, q_labels, g_labels, dist_unknown=None, n_boot: int = 1000,
-                 seed: int = 0, level: float = 0.95) -> dict:
+                 seed: int = 0, level: float = 0.95, s_known=None, s_unknown=None) -> dict:
     """Percentile bootstrap CIs for rank-1 and AUROC: resample queries (and
-    unknowns) with replacement. Shows how much the small test set wobbles."""
+    unknowns) with replacement. Shows how much the small test set wobbles.
+    s_known / s_unknown: precomputed "new tiger" scores (default: nearest distance)."""
     rng = np.random.default_rng(seed)
     nn_correct = _sorted_matches(dist_known, q_labels, g_labels)[:, 0]
-    s_known = np.min(dist_known, axis=1)
-    s_unk = None if dist_unknown is None else np.min(dist_unknown, axis=1)
+    if s_known is None:
+        s_known = np.min(dist_known, axis=1)
+    s_unk = s_unknown
+    if s_unk is None and dist_unknown is not None:
+        s_unk = np.min(dist_unknown, axis=1)
     r1, au = [], []
     for _ in range(n_boot):
         i = rng.integers(0, len(s_known), len(s_known))

@@ -55,3 +55,22 @@ def distance_matrix(q_feats, g_feats, n_jobs: int = 8) -> np.ndarray:
     with Pool(n_jobs, initializer=_init, initargs=(g_feats,)) as pool:
         scores = pool.map(_row, q_feats, chunksize=1)
     return -np.asarray(scores, dtype=np.float64)
+
+
+def _max_row(args):
+    qf, cand = args
+    return max((match_score(qf, _GALLERY[j]) for j in cand), default=0.0)
+
+
+def max_inliers_candidates(q_feats, g_feats, candidates, n_jobs: int = 8) -> np.ndarray:
+    """For each query, the best RANSAC inlier score over its candidate gallery indices
+    (D18 SIFT fusion: candidates = gallery images of the top-k entities by embedding)."""
+    with Pool(n_jobs, initializer=_init, initargs=(g_feats,)) as pool:
+        out = pool.map(_max_row, list(zip(q_feats, candidates)), chunksize=4)
+    return np.asarray(out, dtype=np.float64)
+
+
+def candidates_from_entities(top_ents, g_labels) -> list[np.ndarray]:
+    """Gallery indices belonging to each query's top-k entities."""
+    g_labels = np.asarray(g_labels)
+    return [np.flatnonzero(np.isin(g_labels, row)) for row in top_ents]
