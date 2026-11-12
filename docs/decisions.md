@@ -138,3 +138,21 @@ Format: **Decision**, **Why**, **Alternatives**, **Consequences**.
 - **Decision:** (1) DINOv2+ArcFace, (2) ResNet50+triplet, (3) pick the best on val, run it with 3 seeds, evaluate on test once, (4) SIFT top-k fusion, (5) more epochs / higher resolution if time allows.
 - **Why:** DINOv2 has the best chance of being the winner, so it goes first; triplet is the standard loss comparison the report needs; test is touched once, only after the choice is made on val.
 - **Consequences:** MegaDescriptor stays optional and is only run after checking whether its pretraining data includes ATRW (contamination).
+
+## D18. openset_val may choose the open-set scoring rule, from a list fixed in advance (Nov 12, 2026)
+- **Decision:** The "is this a new tiger?" score and any fusion weights are chosen on **val + openset_val** (matched unknowns, D10), from the candidates below, which are written down **before any of them is evaluated**. Training configs are still chosen on val mAP only (D13). Test is evaluated once, for the final pipeline.
+- **Candidates:**
+  - **S1 nearest:** distance to the nearest gallery image (the current score).
+  - **S2 centroid:** distance to the nearest *entity mean embedding* (mean of that entity's L2-normalized gallery embeddings, re-normalized).
+  - **S3 margin:** with d1 ≤ d2 the per-entity nearest-image distances of the best and second-best entities, score = −(d2 − d1). A known tiger has one clear winner; a new tiger is ambiguous.
+  - **+TTA:** embeddings averaged over 5 fixed views (full image + 4 corner crops at 90% scale, **no flips**), then re-normalized.
+  - **+ENS:** distance matrix = w·DINOv2 + (1−w)·ResNet50, w ∈ {0.25, 0.5, 0.75}.
+  - **+SIFT:** SIFT inlier counts against the gallery images of the top-10 entities by embedding distance; fused score = z(embedding score) − w·z(log1p(max inliers)), w ∈ {0.25, 0.5, 1}; z-scores use the val known + unknown pool.
+- **Selection protocol:** pick the best of S1–S3 by openset_val AUROC; then add TTA, ENS, SIFT one at a time, keeping each only if AUROC rises **≥ 0.01** and val rank-1 / mAP don't drop. Every candidate's numbers go in `results/openset_val_grid.csv`, kept or not.
+- **Why:** The scoring rule is part of the open-set detector, the same role as the threshold (D6), not part of training. A short pre-declared list plus the ≥0.01 rule limits how much we can overfit 46 unknown images.
+- **Alternatives:** Fix one rule by reasoning only (no selection; can't tell which idea helps until test); free search over many rules (would overfit openset_val).
+- **Consequences:** openset_val AUROC of the chosen pipeline is optimistically biased (it was used to choose), so only test and the 5-fold estimate (D20) are reported as results.
+
+## D21. Run order revised for open-set focus (Nov 12, 2026), replaces D17
+- **Decision:** (A) better open-set scoring on the saved checkpoints (D18), (B) DINOv2 overfitting fixes / higher resolution / ViT-B on Colab, chosen on val mAP, (C) best config × 3 seeds → test once with the chosen scoring, (D) 5-fold rotated open-set estimate (D20). ResNet50+triplet and DINOv2+triplet become optional.
+- **Why:** DINOv2 is the base model (val rank-1 76%, mAP 0.76); open-set AUROC (0.76) is the weak spot and the project goal is to push it toward 0.9. Scoring changes are cheap and need no training, so they go first.
