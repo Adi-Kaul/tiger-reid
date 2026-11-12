@@ -1,0 +1,9 @@
+# B2 (D19, revised D22): plain DINOv2-S settings (as dinov2s_arcface) at 336x336
+# (multiple of patch 14) for finer stripe detail; fp16 autocast for speed
+name: dinov2s_336
+backbone: vit_small_patch14_dinov2.lvd142m
+loss: arcface
+size: [336, 336]
+epochs: 30
+lr_backbone: 3.0e-5
+amp: true

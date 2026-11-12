@@ -6,7 +6,7 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 
 ## ▶ START HERE (handoff for the next session, updated Nov 12)
 
-**Latest (Nov 12, late): B1 `dinov2s_reg` done** (val rank-1 66%, mAP 0.72, AUROC 0.79; best epoch 27/30). Regularization stops memorizing but doesn't help: last-8-epoch mAP ties the plain DINOv2 run (0.72 vs 0.72), rank-1 is ~8 pts lower, AUROC is unchanged. Plain DINOv2-S stays the base. **Open question for the user:** should B2 (336 px) / B3 (ViT-B) keep B1's regularization (as D19 planned) or use the plain settings? The Drive connector is now on adikaul07, so Claude can read run folders directly.
+**Latest (Nov 12, late): B1 `dinov2s_reg` done** (val rank-1 66%, mAP 0.72, AUROC 0.79; best epoch 27/30). Regularization stops memorizing but doesn't help: last-8-epoch mAP ties the plain DINOv2 run (0.72 vs 0.72), rank-1 is ~8 pts lower, AUROC is unchanged. Plain DINOv2-S stays the base. **Decided (D22): B2/B3 use the plain settings.** **Next on Colab (adikaul07):** `configs/dinov2s_336.yaml` (B2, now the notebook default), then `configs/dinov2b.yaml` (B3), chosen on val mAP (compare both best-epoch and last-8-epoch mean, since single-epoch peaks are noisy). The Drive connector is now on adikaul07, so Claude can read run folders directly.
 
 **Where we are:** Phases 0–3 done. **Phase 4 in progress.** Two full runs on Colab T4 (val, seed 0): **ResNet50+ArcFace** rank-1 70%, mAP 0.69, AUROC 0.75; **DINOv2-S+ArcFace (lr 3e-5)** rank-1 **76%**, mAP **0.76**, AUROC 0.76 (best epoch 11, early stop at 19, 12 min). DINOv2 leads on rank-1/mAP, ties on AUROC; one seed and overlapping CIs. Weights in Drive `MyDrive/tiger-reid-runs/`. Notebook in Drive: `colab_train_v4.ipynb` (older copies superseded). **Next (D17):** ResNet50+triplet, then best on val → 3 seeds → `--eval-test` once → SIFT top-k fusion (D16).
 **Improvements on the table (roadmap Phase 4):** fine-tuned DINOv2, SIFT re-ranking/fusion of top-k (SIFT val AUROC 0.83 > trained 0.75), higher input resolution, more epochs (still creeping up at ep 30 when LR hit 0), ≥3 seeds.
@@ -81,7 +81,7 @@ python scripts/summarize_results.py              # -> results/summary.md
 - **The first DINOv2 run's 0.765 was a one-epoch spike.** Averaged over each run's last 8 epochs, mAP is tied (0.721 vs 0.718). B1's curve is smooth, so its number is less inflated by picking the best epoch.
 - **Rank-1 is clearly worse** (−10 pts at the chosen epoch, −8 pts on the last-8 average; flat at 65.7% for the last 10 epochs). Open-set AUROC is +0.03 matched / −0.04 all-unknowns: no real change.
 - By the D13/D19 rule (val mAP), **B1 loses; the plain DINOv2-S config stays the base.** Log: `results/train_logs/dinov2s_reg_s0.csv`; weights in the adikaul07 Drive `MyDrive/tiger-reid-runs/dinov2s_reg_s0_20261112-2346/`.
-- B2/B3 were planned on top of B1's settings; that needs revisiting (open question in START HERE).
+- B2/B3 switched to the plain settings (`dinov2s_336`, `dinov2b`; D22).
 
 **Problems → fixes**
 - Drive connector was on the umich account → switched to adikaul07, so run folders can now be read directly.

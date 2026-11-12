@@ -97,8 +97,11 @@ def test_regularized_config_trains(toy_splits, tmp_path):
 def test_new_configs_parse():
     import yaml
     from tiger_reid.data import REPO
-    for name in ["dinov2s_reg", "dinov2s_reg_336", "dinov2b_reg"]:
+    for name, reg in [("dinov2s_reg", True), ("dinov2s_336", False), ("dinov2b", False)]:
         cfg = {**DEFAULTS, **yaml.safe_load(open(REPO / "configs" / f"{name}.yaml"))}
-        assert cfg["name"] == name and cfg["erase"] and cfg["drop_path"] == 0.1
+        assert cfg["name"] == name
+        # B1 has the D19 regularization; B2/B3 use the plain settings (D22)
+        assert cfg["erase"] == reg and (cfg["drop_path"] == 0.1) == reg
+        assert cfg["crop_scale"] == ([0.5, 1.0] if reg else [0.7, 1.0])
         if "vit" in cfg["backbone"]:
             assert cfg["size"][0] % 14 == 0

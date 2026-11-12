@@ -1,0 +1,9 @@
+# B3 (D19, revised D22): DINOv2-B/14 (86M params), plain settings at 224;
+# gentler backbone lr for the bigger model; fp16 autocast to fit a T4
+name: dinov2b
+backbone: vit_base_patch14_dinov2.lvd142m
+loss: arcface
+size: [224, 224]
+epochs: 30
+lr_backbone: 2.0e-5
+amp: true

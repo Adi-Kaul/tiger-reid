@@ -176,3 +176,9 @@ Format: **Decision**, **Why**, **Alternatives**, **Consequences**.
   - B2/B3 also switch to fp16, a small confound noted in the report.
   - Defaults (`drop_path 0`, no erase, scale 0.7–1, fp32) reproduce the earlier runs exactly.
 - **Outcome B1 (Nov 12):** val mAP 0.723 (best epoch 27) vs 0.765 for the plain run, which loses by the selection rule. Over the last 8 epochs, mAP is tied (0.718 vs 0.721), rank-1 is lower (65% vs 73%) and AUROC is about the same (0.79 vs 0.78). The regularization stopped memorization (train loss 1.8 vs 0.02) without improving generalization. The plain DINOv2-S config stays the base. Whether B2/B3 keep these settings is pending the user's call.
+
+## D22. B2/B3 use the plain DINOv2-S settings, not B1's regularization (Nov 12, 2026), revises D19
+- **Decision:** B2 = `dinov2s_336` (plain DINOv2-S at 336×336) and B3 = `dinov2b` (DINOv2-B/14 at 224, backbone lr 2e-5). Both have no RandomErasing, crop scale 0.7–1, no drop-path, and early stopping as before. Both keep fp16 autocast (`amp: true`) for T4 time and memory. Configs renamed from `*_reg*`, which were never run.
+- **Why:** B1 showed the regularization costs rank-1 (~8 pts on the last-8-epoch average) without gaining mAP or open-set AUROC. Using the plain settings means each run changes one thing (resolution or model size) against the current best config.
+- **Alternatives:** Keep B1 settings as D19 planned (bigger inputs/models might need them more, but B1 is evidence against); drop-path only (a new untested mix).
+- **Consequences:** B2/B3 compare cleanly with the plain `dinov2s_arcface` run except for fp16 (noted in the report). ViT-B may overfit faster; early stopping (patience 8) handles that, and if it does, regularization can be revisited for B3 only.
