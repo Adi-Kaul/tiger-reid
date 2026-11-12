@@ -110,3 +110,31 @@ Format: **Decision**, **Why**, **Alternatives**, **Consequences**.
 - **Why:** The 8 GB M2 is too slow (~70 s/epoch, 30 epochs ≈ 35 min per run) and the first full ResNet50 run died silently after epoch 3. Ablations and ≥3 seeds need cheap runs.
 - **Alternatives:** Keep training on mps with checkpoint resume (slow, still fragile); a paid cloud GPU (unnecessary at this data size).
 - **Consequences:** CUDA and mps don't give bit-identical numbers for the same seed, so compare models run on the same device type. Same code, same frozen split file, same seeds.
+
+## D15. Second model: DINOv2 ViT-S/14 + ArcFace, backbone lr 3e-5 (Nov 12, 2026)
+- **Decision:** After ResNet50+ArcFace (val rank-1 70%, mAP 0.69, AUROC 0.75), the next run is `vit_small_patch14_dinov2.lvd142m` + ArcFace, same protocol (D13) except **backbone lr 3e-5** (ResNet50 used 1e-4). One run at 3e-5 only, no lr sweep.
+- **Why DINOv2:**
+  1. Best untrained features: val rank-1 58% vs 37%, mAP 0.31 vs 0.22 for ResNet50. A better start usually means a better finish.
+  2. Self-supervised pretraining (142M images, matching patches/views) favors fine local texture, which is what stripe patterns are; ImageNet-label pretraining (ResNet50) only needs "is it a tiger", not "which tiger".
+  3. DINOv2 features are among the strongest in recent wildlife re-ID comparisons.
+  4. CNN vs ViT at similar size (22M vs 25M params) is a fair, reportable comparison.
+- **Why lr 3e-5:** 1e-4 is on the high side for fine-tuning a pretrained ViT on ~1,300 images and risks overwriting what it already knows; common practice is 1e-5–5e-5. Chosen from standard practice before seeing any DINOv2 training result, not tuned on val or test.
+- **Alternatives:** Same lr as ResNet50 (1e-4; identical settings, but likely suboptimal for a ViT); sweep {1e-4, 3e-5} and pick on val (cleaner but one extra run; do it later if DINOv2 underperforms); layer-wise lr decay (more knobs).
+- **Consequences:** ResNet50 and DINOv2 differ in backbone lr as well as architecture, so the report says "each with a standard fine-tuning lr", not "identical settings". Risks: the untrained head start may vanish after fine-tuning; ViTs can be unstable on small data. If DINOv2 ends up below ResNet50 on val, try 1e-4 before concluding.
+
+## D16. How to read open-set AUROC, and the plan for SIFT fusion (Nov 12, 2026)
+- **Decision:** Treat SIFT's val AUROC of 0.83 as a hint, not as evidence that SIFT beats the trained model at open-set. SIFT fusion stays on the list as a modest experiment: re-score only the embedding's **top-k (~10)** gallery matches with SIFT inlier counts and combine the scores; choose k and the weighting on val/openset_val.
+- **Why:**
+  1. The same untuned SIFT dropped from 0.83 on val to 0.645 on test: small-sample luck.
+  2. Unknown sets are tiny (val 46 images / ~5 tigers, test 19 / 6), so a few odd images move AUROC by ~0.1.
+  3. CIs overlap on val: SIFT [0.75, 0.90] vs ResNet50+ArcFace [0.67, 0.84].
+  4. Still worth trying: SIFT measures exact stripe-point alignment while the embedding measures overall appearance, so they tend to make different mistakes and fusing them can help.
+  5. Full SIFT costs ~2.3 s per query vs milliseconds for embeddings; checking only the top-k keeps it practical.
+- **Scale used when describing AUROC:** 0.5 = chance; 0.6–0.7 weak; 0.7–0.8 useful but many errors; 0.8–0.9 good; 0.9+ strong.
+- **Alternatives:** Full SIFT over the whole gallery (slow); drop SIFT (loses a complementary signal).
+- **Consequences:** Open-set claims in the report come with CIs and ≥3 seeds; the real comparison is on test after the final model is chosen.
+
+## D17. Phase 4 run order (Nov 12, 2026)
+- **Decision:** (1) DINOv2+ArcFace, (2) ResNet50+triplet, (3) pick the best on val, run it with 3 seeds, evaluate on test once, (4) SIFT top-k fusion, (5) more epochs / higher resolution if time allows.
+- **Why:** DINOv2 has the best chance of being the winner, so it goes first; triplet is the standard loss comparison the report needs; test is touched once, only after the choice is made on val.
+- **Consequences:** MegaDescriptor stays optional and is only run after checking whether its pretraining data includes ATRW (contamination).

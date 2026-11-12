@@ -3,3 +3,4 @@ backbone: vit_small_patch14_dinov2.lvd142m
 loss: arcface
 size: [224, 224]
 epochs: 30
+lr_backbone: 3.0e-5   # D15: lower than ResNet50's 1e-4 to refine, not overwrite, pretrained ViT features

@@ -6,7 +6,7 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 
 ## ▶ START HERE (handoff for the next session, updated Nov 11)
 
-**Where we are:** Phases 0–3 done. **Phase 4 in progress.** First full run done on Colab T4: **ResNet50+ArcFace, val rank-1 70% [60–81], mAP 0.69, AUROC 0.75** (16 min, best = last epoch 30). Beats every baseline on val by a wide margin on rank-1/mAP; SIFT still has higher val AUROC (0.83). Weights in Drive `MyDrive/tiger-reid-runs/resnet50_arcface_s0_20261112-0834/` (download to `checkpoints/` when needed). **Next:** ResNet50+triplet, DINOv2+ArcFace on Colab (`notebooks/colab_train.ipynb`, change `CONFIG`), then pick best on val → 3 seeds → `--eval-test` once.
+**Where we are:** Phases 0–3 done. **Phase 4 in progress.** First full run done on Colab T4: **ResNet50+ArcFace, val rank-1 70% [60–81], mAP 0.69, AUROC 0.75** (16 min, best = last epoch 30). Beats every baseline on val by a wide margin on rank-1/mAP; SIFT still has higher val AUROC (0.83). Weights in Drive `MyDrive/tiger-reid-runs/resnet50_arcface_s0_20261112-0834/` (download to `checkpoints/` when needed). **Next (D17):** DINOv2+ArcFace on Colab with backbone lr 3e-5 (D15; set `CONFIG = "configs/dinov2s_arcface.yaml"`), then ResNet50+triplet, then pick best on val → 3 seeds → `--eval-test` once → SIFT top-k fusion (D16).
 **Improvements on the table (roadmap Phase 4):** fine-tuned DINOv2, SIFT re-ranking/fusion of top-k (SIFT val AUROC 0.83 > trained 0.75), higher input resolution, more epochs (still creeping up at ep 30 when LR hit 0), ≥3 seeds.
 **Mode:** rapid development (see `CLAUDE.md`). Claude writes code, explains briefly, runs `pytest -q`, commits + pushes after each verified step, and asks at phase boundaries.
 **Read first:** [`learning/00-project-story.md`](learning/00-project-story.md) (the whole project in plain words + Phase 4 plan), [`decisions.md`](decisions.md) (D1–D11), `results/summary.md`.
@@ -52,6 +52,7 @@ python scripts/summarize_results.py              # -> results/summary.md
 - Open-set: 0.51 → 0.75, so the trained embedding now gives a meaningful "same tiger" distance. SIFT is still better at spotting new tigers on val (0.83), so SIFT fusion is worth trying.
 - Val mAP climbed fast to ~0.6 by epoch 8, then slowly to 0.69; best epoch = 30 (last), LR had decayed to 0. More epochs may add a little.
 - Log: `results/train_logs/resnet50_arcface_s0.csv` (values from run.log, 3 decimals).
+- Decisions D15 (DINOv2 next, lr 3e-5), D16 (SIFT's 0.83 val AUROC is mostly small-sample luck; fusion = top-k re-scoring), D17 (run order).
 
 **Problems → fixes**
 - "Notebook not found" from the GitHub link (private repo) → uploaded the notebook to Drive.
