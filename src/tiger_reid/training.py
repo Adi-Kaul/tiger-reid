@@ -36,6 +36,8 @@ DEFAULTS = {
     "m_per_class": 4, "batch_size": 32, "epochs": 30, "warmup_epochs": 1, "patience": 8,
     "lr_backbone": 1e-4, "lr_head": 1e-3, "lr_loss": 1e-2, "weight_decay": 1e-4,
     "num_workers": 4, "seed": 0,
+    # regularization / speed (D19); defaults reproduce the first runs
+    "drop_path": 0.0, "erase": False, "crop_scale": [0.7, 1.0], "amp": False,
 }
 
 
@@ -77,7 +79,8 @@ def _check_pml_version():
 
 def make_train_loader(train_df: pd.DataFrame, cfg: dict) -> DataLoader:
     _check_pml_version()
-    ds = ReidDataset(train_df, train_transform(tuple(cfg["size"])))
+    cfg = {**DEFAULTS, **cfg}
+    ds = ReidDataset(train_df, train_transform(tuple(cfg["size"]), cfg["erase"], cfg["crop_scale"]))
     sampler = MPerClassSampler(ds.labels, m=cfg["m_per_class"], batch_size=cfg["batch_size"],
                                length_before_new_iter=len(ds))
     nw = cfg["num_workers"]
@@ -96,7 +99,10 @@ def make_scheduler(opt, cfg: dict, steps_per_epoch: int):
     return torch.optim.lr_scheduler.LambdaLR(opt, f)
 
 
-def train_one_epoch(model, loss_fn, miner, loader, opt, sched, device, max_batches=None) -> float:
+def train_one_epoch(model, loss_fn, miner, loader, opt, sched, device, max_batches=None,
+                    scaler=None) -> float:
+    """scaler: a torch.amp.GradScaler -> fp16 autocast for the backbone (CUDA only).
+    The loss is computed in fp32 (ArcFace's scale 64 overflows fp16)."""
     model.train()
     loss_fn.train()
     total, n = 0.0, 0
@@ -104,11 +110,18 @@ def train_one_epoch(model, loss_fn, miner, loader, opt, sched, device, max_batch
         if max_batches is not None and b >= max_batches:
             break
         x, y = x.to(device), y.to(device)
-        emb = model(x)
+        with torch.autocast(device.type, dtype=torch.float16, enabled=scaler is not None):
+            emb = model(x)
+        emb = emb.float()
         loss = loss_fn(emb, y, miner(emb, y)) if miner is not None else loss_fn(emb, y)
         opt.zero_grad(set_to_none=True)
-        loss.backward()
-        opt.step()
+        if scaler is not None:
+            scaler.scale(loss).backward()
+            scaler.step(opt)
+            scaler.update()
+        else:
+            loss.backward()
+            opt.step()
         if sched is not None:
             sched.step()
         total += loss.item()
@@ -136,7 +149,8 @@ def fit(cfg: dict, device, splits: pd.DataFrame | None = None, run_name: str | N
     check_train_df(train_df, splits, loader.dataset.transform)
     n_classes = len(loader.dataset.classes)
 
-    model = EmbeddingNet(cfg["backbone"], cfg["dim"], cfg["size"], cfg["pretrained"]).to(device)
+    model = EmbeddingNet(cfg["backbone"], cfg["dim"], cfg["size"], cfg["pretrained"],
+                         cfg["drop_path"]).to(device)
     loss_fn, miner = build_loss(cfg, n_classes)
     loss_fn = loss_fn.to(device)
     groups = model.param_groups(cfg["lr_backbone"], cfg["lr_head"])
@@ -144,6 +158,8 @@ def fit(cfg: dict, device, splits: pd.DataFrame | None = None, run_name: str | N
         groups.append({"params": loss_fn.parameters(), "lr": cfg["lr_loss"]})
     opt = torch.optim.AdamW(groups, weight_decay=cfg["weight_decay"])
     sched = make_scheduler(opt, cfg, len(loader))
+    use_amp = cfg["amp"] and device.type == "cuda"   # mps/cpu stay fp32
+    scaler = torch.amp.GradScaler("cuda") if use_amp else None
 
     val_sets = eval_sets(splits, "val")
     CKPT_DIR.mkdir(exist_ok=True)
@@ -153,7 +169,7 @@ def fit(cfg: dict, device, splits: pd.DataFrame | None = None, run_name: str | N
     history, best, bad = [], -1.0, 0
     for epoch in range(1, cfg["epochs"] + 1):
         t0 = time.time()
-        tr_loss = train_one_epoch(model, loss_fn, miner, loader, opt, sched, device)
+        tr_loss = train_one_epoch(model, loss_fn, miner, loader, opt, sched, device, scaler=scaler)
         m = evaluate_model(model, val_sets, cfg["size"], device, keys=["gallery", "query", "unknown"])
         row = {"epoch": epoch, "train_loss": tr_loss, "val_mAP": m["mAP"], "val_rank1": m["rank1"],
                "val_auroc": m["auroc"], "lr_backbone": opt.param_groups[0]["lr"],
@@ -175,3 +191,15 @@ def fit(cfg: dict, device, splits: pd.DataFrame | None = None, run_name: str | N
     state = torch.load(ckpt, map_location=device)
     model.load_state_dict(state["model"])
     return model, pd.DataFrame(history), state["epoch"]
+
+
+def load_model(ckpt_path, device=None) -> tuple[EmbeddingNet, dict]:
+    """Rebuild an EmbeddingNet from a checkpoint saved by fit() -> (model in eval mode, cfg).
+    No pretrained download needed: all weights come from the checkpoint."""
+    state = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+    cfg = {**DEFAULTS, **state["cfg"]}
+    model = EmbeddingNet(cfg["backbone"], cfg["dim"], cfg["size"], pretrained=False)
+    model.load_state_dict(state["model"])
+    if device is not None:
+        model = model.to(device)
+    return model.eval(), cfg

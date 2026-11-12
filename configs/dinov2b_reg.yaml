@@ -1,0 +1,11 @@
+# B3 (D19): DINOv2-B/14 (86M params) with B1 settings at 224; fp16 autocast to fit a T4
+name: dinov2b_reg
+backbone: vit_base_patch14_dinov2.lvd142m
+loss: arcface
+size: [224, 224]
+epochs: 30
+lr_backbone: 2.0e-5
+drop_path: 0.1
+erase: true
+crop_scale: [0.5, 1.0]
+amp: true

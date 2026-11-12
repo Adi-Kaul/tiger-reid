@@ -19,15 +19,20 @@ def eval_transform(size=(224, 224)):
     return T.Compose([T.Resize(size), T.ToTensor(), T.Normalize(IMAGENET_MEAN, IMAGENET_STD)])
 
 
-def train_transform(size=(224, 224)):
-    """Mild augmentation: random crop/scale, small rotation, colour jitter. No flips."""
-    return T.Compose([
-        T.RandomResizedCrop(size, scale=(0.7, 1.0), ratio=(0.75 * size[1] / size[0], 1.33 * size[1] / size[0])),
+def train_transform(size=(224, 224), erase: bool = False, scale=(0.7, 1.0)):
+    """Mild augmentation: random crop/scale, small rotation, colour jitter. No flips.
+    erase=True adds RandomErasing (hides a random patch so the model can't rely on
+    one region; D19)."""
+    tf = [
+        T.RandomResizedCrop(size, scale=tuple(scale), ratio=(0.75 * size[1] / size[0], 1.33 * size[1] / size[0])),
         T.RandomRotation(10),
         T.ColorJitter(0.3, 0.3, 0.2, 0.02),
         T.ToTensor(),
         T.Normalize(IMAGENET_MEAN, IMAGENET_STD),
-    ])
+    ]
+    if erase:
+        tf.append(T.RandomErasing(p=0.5, scale=(0.02, 0.15), value=0))
+    return T.Compose(tf)
 
 
 class ReidDataset(Dataset):

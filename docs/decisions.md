@@ -156,3 +156,22 @@ Format: **Decision**, **Why**, **Alternatives**, **Consequences**.
 ## D21. Run order revised for open-set focus (Nov 12, 2026), replaces D17
 - **Decision:** (A) better open-set scoring on the saved checkpoints (D18), (B) DINOv2 overfitting fixes / higher resolution / ViT-B on Colab, chosen on val mAP, (C) best config × 3 seeds → test once with the chosen scoring, (D) 5-fold rotated open-set estimate (D20). ResNet50+triplet and DINOv2+triplet become optional.
 - **Why:** DINOv2 is the base model (val rank-1 76%, mAP 0.76); open-set AUROC (0.76) is the weak spot and the project goal is to push it toward 0.9. Scoring changes are cheap and need no training, so they go first.
+
+## D19. Overfitting fixes, higher resolution, ViT-B, fp16 on CUDA (Nov 12, 2026)
+- **Decision:** Three Colab runs, chosen on **val mAP** (D13), each also reporting openset_val AUROC as a secondary check:
+  - **B1 `dinov2s_reg`:** DINOv2-S at 224 + RandomErasing (p 0.5, 2–15% of the image) + crop scale (0.5, 1.0) + drop-path 0.1.
+  - **B2 `dinov2s_reg_336`:** B1 at 336×336.
+  - **B3 `dinov2b_reg`:** DINOv2-B/14 + B1 settings at 224, backbone lr 2e-5 (a bigger model needs a gentler lr).
+  - B2 and B3 use fp16 autocast on CUDA (`amp: true`), with the loss in fp32 (ArcFace's scale 64 overflows fp16).
+- **Why:**
+  - DINOv2-S hit train loss 0.02 by epoch 19 while val bounced around: it memorizes the 86 training tigers. Over-confident embeddings also make new tigers look "known".
+  - Erasing and stronger crops stop it relying on one region (or the background).
+  - Drop-path is the standard ViT regularizer.
+  - 336 px gives 24×24 patches instead of 16×16, so finer stripe detail.
+  - ViT-B is the next DINOv2 size up.
+  - fp16 roughly halves T4 time and memory.
+- **Alternatives:** Label smoothing / sub-center ArcFace (later if needed); freezing early blocks; fewer epochs.
+- **Consequences:**
+  - B1 changes only regularization vs the first DINOv2 run (same precision), so it is a clean comparison.
+  - B2/B3 also switch to fp16, a small confound noted in the report.
+  - Defaults (`drop_path 0`, no erase, scale 0.7–1, fp32) reproduce the earlier runs exactly.

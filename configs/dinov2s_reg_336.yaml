@@ -1,0 +1,11 @@
+# B2 (D19): B1 at 336x336 (multiple of patch 14) for finer stripe detail; fp16 autocast for speed
+name: dinov2s_reg_336
+backbone: vit_small_patch14_dinov2.lvd142m
+loss: arcface
+size: [336, 336]
+epochs: 30
+lr_backbone: 3.0e-5
+drop_path: 0.1
+erase: true
+crop_scale: [0.5, 1.0]
+amp: true

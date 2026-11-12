@@ -1,0 +1,10 @@
+# B1 (D19): DINOv2-S + ArcFace with anti-overfitting settings, 224x224
+name: dinov2s_reg
+backbone: vit_small_patch14_dinov2.lvd142m
+loss: arcface
+size: [224, 224]
+epochs: 30
+lr_backbone: 3.0e-5
+drop_path: 0.1
+erase: true
+crop_scale: [0.5, 1.0]
