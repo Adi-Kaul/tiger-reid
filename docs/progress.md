@@ -6,8 +6,8 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 
 ## ▶ START HERE (handoff for the next session, updated Nov 11)
 
-**Where we are:** Phases 0–3 done. **Phase 4 (metric learning) in progress:** model, training loop, configs, smoke test done (38 tests). First full local ResNet50+ArcFace run **died after epoch 3** (val mAP 0.40, rank-1 55%, AUROC 0.66, still climbing), so training moved to **Colab** (`notebooks/colab_train.ipynb`, D14). **Next:** run it on Colab for ResNet50+ArcFace, pull `MyDrive/tiger-reid-runs/` results back, merge `new_rows.csv` into `results/results.csv`.
-**Improvements on the table (roadmap Phase 4):** fine-tuned DINOv2, SIFT re-ranking of top-k (open-set), higher input resolution after training, ≥3 seeds.
+**Where we are:** Phases 0–3 done. **Phase 4 in progress.** First full run done on Colab T4: **ResNet50+ArcFace, val rank-1 70% [60–81], mAP 0.69, AUROC 0.75** (16 min, best = last epoch 30). Beats every baseline on val by a wide margin on rank-1/mAP; SIFT still has higher val AUROC (0.83). Weights in Drive `MyDrive/tiger-reid-runs/resnet50_arcface_s0_20261112-0834/` (download to `checkpoints/` when needed). **Next:** ResNet50+triplet, DINOv2+ArcFace on Colab (`notebooks/colab_train.ipynb`, change `CONFIG`), then pick best on val → 3 seeds → `--eval-test` once.
+**Improvements on the table (roadmap Phase 4):** fine-tuned DINOv2, SIFT re-ranking/fusion of top-k (SIFT val AUROC 0.83 > trained 0.75), higher input resolution, more epochs (still creeping up at ep 30 when LR hit 0), ≥3 seeds.
 **Mode:** rapid development (see `CLAUDE.md`). Claude writes code, explains briefly, runs `pytest -q`, commits + pushes after each verified step, and asks at phase boundaries.
 **Read first:** [`learning/00-project-story.md`](learning/00-project-story.md) (the whole project in plain words + Phase 4 plan), [`decisions.md`](decisions.md) (D1–D11), `results/summary.md`.
 
@@ -29,6 +29,34 @@ python scripts/summarize_results.py              # -> results/summary.md
 ```
 
 **Still open (optional):** email a professor about wild camera-trap data; tidy notebook 00.
+
+---
+
+## Nov 12, 2026 (Thu) — first full training run (Colab)
+
+**Done**
+- Colab pipeline working: `notebooks/colab_train.ipynb` (opened from Drive since the repo is private; token via Colab secret; Drive mounted at the start). Pinned `timm==1.0.30`, `pytorch-metric-learning==2.9.0` + a fail-fast version check.
+- **ResNet50 + ArcFace, seed 0, 30 epochs on a T4 (32 s/epoch, 16 min).**
+
+**Results (val, 67 queries / 46 matched unknowns, 95% CI)**
+
+| method | rank-1 | rank-5 | mAP | AUROC |
+|---|---|---|---|---|
+| ResNet50 untrained | 37% | 60% | 0.22 | 0.51 |
+| DINOv2 untrained | 58% | 75% | 0.31 | 0.52 |
+| SIFT + RANSAC | 45% | 52% | 0.24 | **0.83** |
+| **ResNet50 + ArcFace** | **70% [60–81]** | **84%** | **0.69** | 0.75 [0.67–0.84] |
+
+**Findings**
+- Training triples mAP (0.22 → 0.69) and lifts rank-1 by 33 points over the same backbone untrained. Biggest gain in the project so far.
+- Open-set: 0.51 → 0.75, so the trained embedding now gives a meaningful "same tiger" distance. SIFT is still better at spotting new tigers on val (0.83), so SIFT fusion is worth trying.
+- Val mAP climbed fast to ~0.6 by epoch 8, then slowly to 0.69; best epoch = 30 (last), LR had decayed to 0. More epochs may add a little.
+- Log: `results/train_logs/resnet50_arcface_s0.csv` (values from run.log, 3 decimals).
+
+**Problems → fixes**
+- "Notebook not found" from the GitHub link (private repo) → uploaded the notebook to Drive.
+- pml 3.0 on Colab turned `MPerClassSampler` into a batch sampler (`length_before_new_iter` gone) → pin 2.9.0 + version guard.
+- Drive auth pop-up timed out after training; then the runtime was recycled and the run lost → mount Drive at the start.
 
 ---
 
