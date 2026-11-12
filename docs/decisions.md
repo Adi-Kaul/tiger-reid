@@ -104,3 +104,9 @@ Format: **Decision**, **Why**, **Alternatives**, **Consequences**.
 - **Why:** Balanced batches guarantee positive pairs and stop entity 153 (98 images) dominating. mAP is the most stable metric on our small val set (D11). Keeping test out of the loop is what makes the test numbers honest.
 - **Alternatives:** Select on val rank-1 (noisier); select on open-set val AUROC (would use open-set entities for model selection, which our rules forbid for training choices beyond the threshold).
 - **Consequences:** Val has only 67 queries, so "best epoch" is itself noisy; we report test for the selected epoch regardless of how it looks.
+
+## D14. Full training runs on Colab GPU (Nov 11, 2026)
+- **Decision:** Full training runs go through `notebooks/colab_train.ipynb` on a Colab T4: clone the repo (read-only token as a Colab secret), download ATRW, run `scripts/train.py --num-workers 2`, and copy the train log, new `results.csv` rows and checkpoint to Google Drive. The rows are then merged into the repo's `results/results.csv` locally. The GPU name is logged in each row's config (`device`).
+- **Why:** The 8 GB M2 is too slow (~70 s/epoch, 30 epochs ≈ 35 min per run) and the first full ResNet50 run died silently after epoch 3. Ablations and ≥3 seeds need cheap runs.
+- **Alternatives:** Keep training on mps with checkpoint resume (slow, still fragile); a paid cloud GPU (unnecessary at this data size).
+- **Consequences:** CUDA and mps don't give bit-identical numbers for the same seed, so compare models run on the same device type. Same code, same frozen split file, same seeds.

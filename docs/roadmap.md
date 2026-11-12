@@ -14,7 +14,7 @@ Rapid-development mode (since Nov 10, 2026): no due dates, aim for results fast,
 - **Open-set entities never touch training**, including for choosing hyperparameters. Choose the open-set threshold on `openset_val`, report on `openset_test`.
 - **No horizontal flips** in augmentation (mirrors the stripes).
 - **License CC BY-NC-SA 4.0.** Cite Li et al. 2019 (arXiv:1906.05586).
-- Compute: local Mac `mps` is enough for this dataset size; Colab if training gets slow.
+- **Compute: full training runs go on Colab** (`notebooks/colab_train.ipynb`, T4 GPU, results → Google Drive `tiger-reid-runs/`), see D14. The 8 GB M2 is too slow (~70 s/epoch) and the first full run died at epoch 3. Local `mps` is fine for tests, smoke runs and evaluation.
 - Still open from Oct 6 (optional now): email a professor about wild camera-trap data.
 
 ## Phase 0: Setup ✅ mostly
@@ -43,9 +43,15 @@ Rapid-development mode (since Nov 10, 2026): no due dates, aim for results fast,
 - **Checkpoint:** baseline rows in `results/results.csv`.
 
 ## Phase 4: Metric learning (core)
-- [ ] Embedding model (timm backbone → 512-d normalized)
-- [ ] Training script + configs; smoke test
+- [x] Embedding model (timm backbone → 512-d normalized)
+- [x] Training script + configs; smoke test
+- [x] Colab training notebook (D14)
 - [ ] Runs: ResNet50 ArcFace, ResNet50 triplet, ViT/DINOv2 ArcFace, MegaDescriptor
+- **Improvements under active consideration** (try after the first full runs, chosen on val):
+  - **DINOv2 fine-tuned:** best untrained mAP (test 0.375); likely the strongest backbone.
+  - **SIFT re-ranking:** re-score the embedding's top-k with SIFT inlier counts. SIFT is the only baseline above chance at spotting new tigers, so this mainly targets open-set AUROC.
+  - **Higher resolution once trained:** stripes are fine detail; size didn't matter untrained (D11) but may after fine-tuning (e.g. 224×448 for flank crops).
+  - **≥3 seeds** for the final configs (cheap on Colab).
 - **Checkpoint:** closed-set table vs. baselines.
 
 ## Phase 5: Open-set + robustness

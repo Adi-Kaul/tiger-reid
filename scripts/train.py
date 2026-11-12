@@ -9,6 +9,7 @@ Use --eval-test only for final configs (chosen on val), once each.
 import argparse
 import time
 
+import torch
 import yaml
 
 from tiger_reid.dataset import pick_device
@@ -22,6 +23,7 @@ def main():
     ap.add_argument("--config", required=True)
     ap.add_argument("--seed", type=int)
     ap.add_argument("--epochs", type=int)
+    ap.add_argument("--num-workers", type=int, help="dataloader workers (Colab has 2 CPUs)")
     ap.add_argument("--eval-test", action="store_true")
     ap.add_argument("--no-log", action="store_true", help="don't write results.csv (debug runs)")
     args = ap.parse_args()
@@ -32,6 +34,8 @@ def main():
         cfg["seed"] = args.seed
     if args.epochs is not None:
         cfg["epochs"] = args.epochs
+    if args.num_workers is not None:
+        cfg["num_workers"] = args.num_workers
 
     device = pick_device()
     print(f"config: {cfg}\ndevice: {device}", flush=True)
@@ -39,7 +43,8 @@ def main():
     splits = load_splits()
     model, hist, best_epoch = fit(cfg, device, splits)
     cfg_log = {**cfg, "best_epoch": best_epoch, "epochs_run": len(hist),
-               "train_minutes": round((time.time() - t0) / 60, 1)}
+               "train_minutes": round((time.time() - t0) / 60, 1),
+               "device": torch.cuda.get_device_name() if device.type == "cuda" else device.type}
     method = f"{cfg['loss']} {cfg['backbone']}"
 
     stages = ["val"] + (["test"] if args.eval_test else [])

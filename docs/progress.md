@@ -6,7 +6,8 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 
 ## ▶ START HERE (handoff for the next session, updated Nov 11)
 
-**Where we are:** Phases 0–3 done. **Phase 4 (metric learning) in progress:** `model.py`, `training.py`, `scripts/train.py`, configs and smoke test done (38 tests). 3-epoch sanity run OK (val mAP 0.31 vs 0.22 untrained). Next: full ResNet50+ArcFace run.
+**Where we are:** Phases 0–3 done. **Phase 4 (metric learning) in progress:** model, training loop, configs, smoke test done (38 tests). First full local ResNet50+ArcFace run **died after epoch 3** (val mAP 0.40, rank-1 55%, AUROC 0.66, still climbing), so training moved to **Colab** (`notebooks/colab_train.ipynb`, D14). **Next:** run it on Colab for ResNet50+ArcFace, pull `MyDrive/tiger-reid-runs/` results back, merge `new_rows.csv` into `results/results.csv`.
+**Improvements on the table (roadmap Phase 4):** fine-tuned DINOv2, SIFT re-ranking of top-k (open-set), higher input resolution after training, ≥3 seeds.
 **Mode:** rapid development (see `CLAUDE.md`). Claude writes code, explains briefly, runs `pytest -q`, commits + pushes after each verified step, and asks at phase boundaries.
 **Read first:** [`learning/00-project-story.md`](learning/00-project-story.md) (the whole project in plain words + Phase 4 plan), [`decisions.md`](decisions.md) (D1–D11), `results/summary.md`.
 
@@ -36,6 +37,7 @@ python scripts/summarize_results.py              # -> results/summary.md
 **Phase 4 (afternoon)**
 - `model.py` (`EmbeddingNet`: timm → Linear → BN → L2, 512-d), `training.py` (ArcFace / triplet+semi-hard miner, `MPerClassSampler` m=4, AdamW + warmup/cosine, early stop on val mAP, guard asserts for train-only / no open-set / no flips), `scripts/train.py`, `configs/*.yaml`, smoke test. Decisions D12–D13. 38/38 tests.
 - **Sanity run** (ResNet50+ArcFace, 3 epochs, val): loss 34.8 → 24.4, val mAP 0.18 → 0.29 → **0.31** (untrained 0.22), rank-5 0.75. Log: `results/train_logs/sanity_resnet50_arcface_3ep.csv`.
+- **Full local run died at epoch 3** (no error; probably sleep / memory on 8 GB): val mAP 0.18 → 0.29 → **0.40**, rank-1 0.55, AUROC 0.66. Log kept as `results/train_logs/local_interrupted_resnet50_arcface_s0.csv`. → Moved training to Colab: `notebooks/colab_train.ipynb` + `train.py --num-workers`, GPU name logged (D14).
 - Speed on the M2: fp32 0.84 s/step (bs 32), bf16 autocast 1.15 s, channels_last 10 s (!) → stay fp32. ~70 s/epoch incl. val pass; first epochs slower (warm-up / memory pressure on 8 GB).
 
 **Done (morning)**
