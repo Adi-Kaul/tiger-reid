@@ -53,7 +53,8 @@ Rapid-development mode (since Nov 10, 2026): no due dates, aim for results fast,
 - [x] B2 `dinov2s_336` (val rank-1 78%, mAP 0.74, AUROC 0.75; last-8 mean mAP 0.69): no gain, 1.7× slower
 - [x] B3 `dinov2b` ViT-B (val rank-1 82%, mAP 0.82, AUROC 0.77; last-8 mean mAP 0.75): **new base model**
 - [x] `dinov2b` seed 1 (run twice by accident): val mAP 0.772 / 0.727 for the same seed, so GPU noise is ±0.05 mAP
-- [ ] `dinov2b` seed 2; `dinov2s_arcface` seeds 1, 2; choose S vs B on 3-run mean val mAP; Stage A open-set scoring on it (D18)
+- [x] `dinov2b` seed 2 (val mAP 0.803). 4-run mean: mAP 0.78 ± 0.04, rank-1 81%, AUROC 0.80
+- [ ] `dinov2s_arcface` seeds 1, 2; choose S vs B on 3-run mean val mAP; Stage A open-set scoring on it (D18)
 - [ ] Runs: ResNet50 triplet; best × 3 seeds; test once; (MegaDescriptor optional)
 - **Improvements under active consideration** (try after the first full runs, chosen on val):
   - **DINOv2 fine-tuned:** best untrained mAP (test 0.375); likely the strongest backbone.
