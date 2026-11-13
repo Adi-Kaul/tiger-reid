@@ -183,3 +183,4 @@ Format: **Decision**, **Why**, **Alternatives**, **Consequences**.
 - **Alternatives:** Keep B1 settings as D19 planned (bigger inputs/models might need them more, but B1 is evidence against); drop-path only (a new untested mix).
 - **Consequences:** B2/B3 compare cleanly with the plain `dinov2s_arcface` run except for fp16 (noted in the report). ViT-B may overfit faster; early stopping (patience 8) handles that, and if it does, regularization can be revisited for B3 only.
 - **Outcome B2 (Nov 13):** val mAP 0.740 at best epoch 13 (< 0.765), last-8-epoch mean 0.688 vs 0.721. Resolution doesn't help, and plain DINOv2-S at 224 stays the base.
+- **Outcome B3 (Nov 13):** val mAP 0.819 at best epoch 11 (> 0.765), last-8-epoch mean 0.748 vs 0.721. **ViT-B `dinov2b` becomes the base config** for seeds, Stage A scoring and the single test evaluation (D21 C). Open-set AUROC is unchanged (0.77).
