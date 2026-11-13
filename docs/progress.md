@@ -6,10 +6,10 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 
 ## ▶ START HERE (handoff for the next session, updated Nov 13)
 
-**Latest (Nov 13): B3 `dinov2b` (DINOv2 ViT-B/14, plain settings, 224, fp16) is the new best and the base model.** Val rank-1 82%, mAP 0.82, AUROC 0.77 (best epoch 11, early stop 19, 17 min); last-8-epoch mean mAP 0.75 / rank-1 78% vs 0.72 / 73% for DINOv2-S. B1 (regularization) and B2 (336 px) gave nothing. Open-set AUROC is still ~0.77 for every model, so better training alone doesn't fix it. **Next:** (1) Colab: `dinov2b` seeds 1 and 2 (set `SEED` in the notebook, config `configs/dinov2b.yaml`). (2) Stage A (D18) open-set scoring on `dinov2b_s0.pt`: the user downloads it (345 MB, adikaul07 Drive `tiger-reid-runs/dinov2b_s0_20261113-0637/`) into `checkpoints/`. (3) Then test once with the chosen scoring (D21 C). Drive connector is on adikaul07, so Claude reads run folders directly.
+**Latest (Nov 13, evening): `dinov2b` seed 1 ran twice (17:58 and 18:37 Colab runs; SEED was never set to 2) and the two runs disagree.** Same seed, val mAP 0.772 vs 0.727, rank-1 82% vs 78%, AUROC 0.77 vs 0.84: GPU training is not deterministic, so run-to-run noise is about ±0.05 mAP. All 3 `dinov2b` runs: rank-1 0.81 ± 0.03, mAP 0.77 ± 0.05, AUROC 0.80 ± 0.04 (mean ± sd). Seed 0's 0.819 was the lucky one, and ViT-B's lead over DINOv2-S (one run, 0.765) is **no longer clear** (last-8 mean mAP 0.75 / 0.68 / 0.64 vs 0.72). **Next:** (1) Colab: `dinov2b` with **SEED = 2**. (2) Recommended: 2 more `dinov2s_arcface` runs (seeds 1, 2, ~12 min each) so S and B are both compared on 3 runs. (3) Stage A (D18) open-set scoring on the chosen model's checkpoint, which the user downloads into `checkpoints/`. (4) Test once (D21 C). Drive connector is on adikaul07, so Claude reads run folders directly.
 
 **Where we are:** Phases 0–3 done. **Phase 4 in progress.** Two full runs on Colab T4 (val, seed 0): **ResNet50+ArcFace** rank-1 70%, mAP 0.69, AUROC 0.75; **DINOv2-S+ArcFace (lr 3e-5)** rank-1 **76%**, mAP **0.76**, AUROC 0.76 (best epoch 11, early stop at 19, 12 min). DINOv2 leads on rank-1/mAP, ties on AUROC; one seed and overlapping CIs. Weights in Drive `MyDrive/tiger-reid-runs/`. Notebook in Drive: `colab_train_v4.ipynb` (older copies superseded). **Next (D17):** ResNet50+triplet, then best on val → 3 seeds → `--eval-test` once → SIFT top-k fusion (D16).
-**Improvements on the table (roadmap Phase 4):** ViT-B helped (B3). Tried and dropped: regularization (B1), 336 px (B2), more epochs (DINOv2 levels off by ~epoch 11–13). Still open: SIFT re-ranking/fusion of top-k and other open-set scoring (Stage A, D18), 3 seeds of `dinov2b`.
+**Improvements on the table (roadmap Phase 4):** ViT-B helped (B3). Tried and dropped: regularization (B1), 336 px (B2), more epochs (DINOv2 levels off by ~epoch 11–13). Still open: SIFT re-ranking/fusion of top-k and other open-set scoring (Stage A, D18), 3 runs each of `dinov2b` and DINOv2-S (one ViT-B rerun already shows ±0.05 mAP noise).
 **Mode:** rapid development (see `CLAUDE.md`). Claude writes code, explains briefly, runs `pytest -q`, commits + pushes after each verified step, and asks at phase boundaries.
 **Read first:** [`learning/00-project-story.md`](learning/00-project-story.md) (the whole project in plain words + Phase 4 plan), [`decisions.md`](decisions.md) (D1–D11), `results/summary.md`.
 
@@ -48,6 +48,9 @@ python scripts/summarize_results.py              # -> results/summary.md
 | B1 dinov2s_reg | 66% [54–76] | 78% | 0.723 | 0.79 [0.70–0.86] | 0.78 | 27 of 30 | 0.718 / 65% / 0.79 |
 | B2 dinov2s_336 | 78% [69–88] | 84% | 0.740 | 0.75 [0.67–0.84] | 0.81 | 13 (stop 21) | 0.688 / 66% / 0.76 |
 | **B3 dinov2b (ViT-B)** | **82% [73–91]** | 82% | **0.819** | 0.77 [0.69–0.85] | **0.84** | 11 (stop 19) | **0.748 / 78%** / 0.77 |
+| dinov2b seed 1 (17:58) | 82% [73–91] | 82% | 0.772 | 0.77 [0.68–0.85] | 0.76 | 7 (stop 15) | 0.679 / 72% / 0.76 |
+| dinov2b seed 1 rerun (18:37) | 78% [67–87] | 82% | 0.727 | 0.84 [0.77–0.91] | 0.85 | 13 (stop 21) | 0.643 / 69% / 0.76 |
+| **dinov2b, 3 runs (mean ± sd)** | 81 ± 3% | 82% | 0.773 ± 0.046 | 0.80 ± 0.04 | 0.81 | | 0.690 / 73% / 0.76 |
 
 **Findings**
 - **Higher resolution doesn't help.** B2 loses on the selection rule (val mAP 0.740 < 0.765). Its post-peak epochs are worse than the 224 run (mAP 0.69 vs 0.72), and it costs 1.7× the time. Its slightly higher best-epoch rank-1 (+1 image of 67) is noise.
@@ -62,8 +65,13 @@ python scripts/summarize_results.py              # -> results/summary.md
 - **Open-set AUROC doesn't move with training** (0.75–0.79 for every model). The "is this tiger new?" score needs its own fix, which is Stage A.
 - Log: `results/train_logs/dinov2b_s0.csv`.
 
+- **Evening: `dinov2b` seed 1, run twice.** The notebook was run twice with `SEED = 1` (13 and 19 min). Same seed, same code (68ebbc5), same T4 type, yet the curves split from epoch 1 (mAP 0.441 vs 0.416), because cuDNN/fp16 GPU kernels aren't bit-deterministic. Both runs are kept and logged, and neither is picked after the fact.
+- **Run-to-run noise is as big as the model differences we've been reading.** Best-epoch mAP across the 3 ViT-B runs is 0.819 / 0.772 / 0.727 (sd 0.046), and the AUROC of the same-seed pair is 0.77 vs 0.84. B3's "clear win" over DINOv2-S (0.765, one run) was largely seed 0 luck: mean 0.773 vs 0.765, and the last-8 mean is 0.690 vs 0.721. **ViT-B vs ViT-S is undecided until DINOv2-S also has 3 runs.**
+- Lesson: with 67 val queries, decide configs on ≥3 runs per arm, not one. The B1/B2 "no gain" verdicts were within this noise too, but they were also slower or no better on the last-8 mean, so they stay dropped.
+- Logs: `results/train_logs/dinov2b_s1.csv`, `dinov2b_s1_rerun.csv`.
+
 **Next**
-- Colab: `dinov2b` seeds 1, 2. Locally: Stage A open-set scoring (D18) on `dinov2b_s0.pt`.
+- Colab: `dinov2b` **SEED = 2**; then `dinov2s_arcface` seeds 1, 2 (recommended). Pick S vs B on the 3-run mean val mAP, then Stage A (D18) on that model.
 
 ---
 
