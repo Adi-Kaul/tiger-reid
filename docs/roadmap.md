@@ -49,7 +49,8 @@ Rapid-development mode (since Nov 10, 2026): no due dates, aim for results fast,
 - [x] ResNet50 ArcFace (val rank-1 70%, mAP 0.69, AUROC 0.75; Colab T4)
 - [x] DINOv2-S ArcFace, lr 3e-5 (val rank-1 76%, mAP 0.76, AUROC 0.76)
 - [x] B1 DINOv2-S + erasing/crop/drop-path (val rank-1 66%, mAP 0.72, AUROC 0.79): no gain, plain config stays (D19 outcome)
-- [ ] B2 `dinov2s_336` / B3 `dinov2b`, plain settings (D22)
+- [x] B2 `dinov2s_336` (val rank-1 78%, mAP 0.74, AUROC 0.75; last-8 mean mAP 0.69): no gain, 1.7× slower
+- [ ] B3 `dinov2b` (ViT-B, plain settings, D22)
 - [ ] Runs: ResNet50 triplet; best × 3 seeds; test once; (MegaDescriptor optional)
 - **Improvements under active consideration** (try after the first full runs, chosen on val):
   - **DINOv2 fine-tuned:** best untrained mAP (test 0.375); likely the strongest backbone.

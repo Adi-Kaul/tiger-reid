@@ -4,12 +4,12 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 
 ---
 
-## ▶ START HERE (handoff for the next session, updated Nov 12)
+## ▶ START HERE (handoff for the next session, updated Nov 13)
 
-**Latest (Nov 12, late): B1 `dinov2s_reg` done** (val rank-1 66%, mAP 0.72, AUROC 0.79; best epoch 27/30). Regularization stops memorizing but doesn't help: last-8-epoch mAP ties the plain DINOv2 run (0.72 vs 0.72), rank-1 is ~8 pts lower, AUROC is unchanged. Plain DINOv2-S stays the base. **Decided (D22): B2/B3 use the plain settings.** **Next on Colab (adikaul07):** `configs/dinov2s_336.yaml` (B2, now the notebook default), then `configs/dinov2b.yaml` (B3), chosen on val mAP (compare both best-epoch and last-8-epoch mean, since single-epoch peaks are noisy). The Drive connector is now on adikaul07, so Claude can read run folders directly.
+**Latest (Nov 13): B1 and B2 done; neither beats plain DINOv2-S at 224.** B1 `dinov2s_reg` (regularization): val mAP 0.72, rank-1 66%. B2 `dinov2s_336` (336 px): val mAP 0.74, rank-1 78% at best epoch 13, but its last-8-epoch mean is 0.69 / 66% vs 0.72 / 73% for the plain run. All three DINOv2-S variants overfit and level off around mAP 0.70–0.72; single-epoch peaks swing ±0.03, which is noise on 67 queries. **Next: B3 `configs/dinov2b.yaml` (ViT-B) on Colab**, then Stage A (open-set scoring, no GPU) on the plain `dinov2s_arcface_s0.pt`. Drive connector is on adikaul07, so Claude reads run folders directly.
 
 **Where we are:** Phases 0–3 done. **Phase 4 in progress.** Two full runs on Colab T4 (val, seed 0): **ResNet50+ArcFace** rank-1 70%, mAP 0.69, AUROC 0.75; **DINOv2-S+ArcFace (lr 3e-5)** rank-1 **76%**, mAP **0.76**, AUROC 0.76 (best epoch 11, early stop at 19, 12 min). DINOv2 leads on rank-1/mAP, ties on AUROC; one seed and overlapping CIs. Weights in Drive `MyDrive/tiger-reid-runs/`. Notebook in Drive: `colab_train_v4.ipynb` (older copies superseded). **Next (D17):** ResNet50+triplet, then best on val → 3 seeds → `--eval-test` once → SIFT top-k fusion (D16).
-**Improvements on the table (roadmap Phase 4):** fine-tuned DINOv2, SIFT re-ranking/fusion of top-k (SIFT val AUROC 0.83 > trained 0.75), higher input resolution, more epochs (still creeping up at ep 30 when LR hit 0), ≥3 seeds.
+**Improvements on the table (roadmap Phase 4):** tried and dropped: regularization (B1), 336 px (B2), more epochs (DINOv2 levels off by ~epoch 13). Still open: ViT-B (B3), SIFT re-ranking/fusion of top-k and other open-set scoring (Stage A, D18), ≥3 seeds of the final config.
 **Mode:** rapid development (see `CLAUDE.md`). Claude writes code, explains briefly, runs `pytest -q`, commits + pushes after each verified step, and asks at phase boundaries.
 **Read first:** [`learning/00-project-story.md`](learning/00-project-story.md) (the whole project in plain words + Phase 4 plan), [`decisions.md`](decisions.md) (D1–D11), `results/summary.md`.
 
@@ -33,6 +33,29 @@ python scripts/summarize_results.py              # -> results/summary.md
 **Wild data (Nov 12):** no public wild tiger re-ID dataset (images + individual IDs) found. Emails sent Nov 12 asking for wild data: Abishek Harihar (Panthera/NCF, Rajaji NP camera-trap DB on GBIF: 305 images, CC BY-NC, no IDs public, image server down), Wenshuo Li (Bristol, used Rajaji data in arXiv 2512.14878), LILA (info@lila.science). Not contacted (no verified address): WhoAmI authors (WCS India / Edinburgh, 32 wild tigers), China NTLNP camera-trap Amur tiger study. Other leads: wild leopard/hyena camera-trap re-ID sets (arXiv 2607.00804) as a zoo→wild proxy; Zenodo 5573206 = 10 years of Indian tiger capture histories (CSV, CC0, locations centred) for the map/SCR part. Any received data stays out of the repo; drop/coarsen coordinates.
 **Account (Nov 12): use adikaul07@gmail.com for everything** (Drive, Colab, Gmail, git). Runs so far live in the umich Drive `MyDrive/tiger-reid-runs/`; new runs go to the adikaul07 Drive (upload `notebooks/colab_train.ipynb` there; separate Colab GPU quota). **Colab GPU quota hit (Nov 12)** on umich; B1 then ran on adikaul07. Stage A needs `dinov2s_arcface_s0.pt` + Colab `resnet50_arcface_s0.pt` downloaded into `checkpoints/` (the local resnet50 file is the epoch-3 leftover).
 **Still open (optional):** tidy notebook 00.
+
+---
+
+## Nov 13, 2026 (Fri) — B2: DINOv2-S at 336 px
+
+**Done**
+- **B2 `dinov2s_336` (D22): plain DINOv2-S at 336×336, fp16, seed 0, T4 (adikaul07 Colab).** Best epoch 13, early-stopped at 21, 60 s/epoch (vs 36 s at 224), 21 min.
+
+| method (val) | rank-1 | rank-5 | mAP | AUROC | AUROC (all) | best ep | last-8-ep mean mAP / rank-1 / AUROC |
+|---|---|---|---|---|---|---|---|
+| **DINOv2-S 224 (plain)** | 76% [66–85] | 85% | **0.765** | 0.76 [0.68–0.84] | 0.82 | 11 (stop 19) | **0.721 / 73%** / 0.78 |
+| B1 dinov2s_reg | 66% [54–76] | 78% | 0.723 | 0.79 [0.70–0.86] | 0.78 | 27 of 30 | 0.718 / 65% / 0.79 |
+| B2 dinov2s_336 | 78% [69–88] | 84% | 0.740 | 0.75 [0.67–0.84] | 0.81 | 13 (stop 21) | 0.688 / 66% / 0.76 |
+
+**Findings**
+- **Higher resolution doesn't help.** B2 loses on the selection rule (val mAP 0.740 < 0.765). Its post-peak epochs are worse than the 224 run (mAP 0.69 vs 0.72), and it costs 1.7× the time. Its slightly higher best-epoch rank-1 (+1 image of 67) is noise.
+- It overfits the same way as the plain 224 run (train loss 0.02 by epoch 19) and peaks around epochs 11–13 like it. So the limit is the 86 training tigers, not image detail.
+- **Pattern so far:** every DINOv2-S variant levels off at val mAP ~0.70–0.72, and single-epoch peaks swing ±0.03. Picking configs by one peak on 67 queries is noisy, so the last-8-epoch mean is reported next to it.
+- Harmless warning with fp16: "lr_scheduler.step() before optimizer.step()". GradScaler skips the first optimizer step while it calibrates the loss scale, which only drops the first LR value of warmup.
+- Log: `results/train_logs/dinov2s_336_s0.csv`; weights in the adikaul07 Drive `MyDrive/tiger-reid-runs/dinov2s_336_s0_20261113-0044/`.
+
+**Next**
+- B3 `dinov2b` (ViT-B) on Colab; then Stage A open-set scoring on the plain DINOv2-S checkpoint.
 
 ---
 
