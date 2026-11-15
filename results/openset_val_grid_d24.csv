@@ -1,0 +1,11 @@
+candidate,pipeline,spec,auroc,auroc_lo,auroc_hi,auroc_all,false_known@keep95,false_known@keep90,rank1,mAP,chosen
+D18,margin + TTA + SIFT w=1.0,"{""score"": ""margin"", ""tta"": true, ""ens_w"": null, ""sift_w"": 1.0}",0.8829,0.818,0.94,0.9008,0.4783,0.4565,0.8209,0.82,True
+N+S,nearest + TTA + SIFT w=0.25,"{""tta"": true, ""ens_w"": null, ""score"": ""nearest"", ""near_a"": null, ""sift_w"": 0.25}",0.8157,0.737,0.888,0.8478,0.8261,0.5435,0.8209,0.82,False
+N+S,nearest + TTA + SIFT w=0.5,"{""tta"": true, ""ens_w"": null, ""score"": ""nearest"", ""near_a"": null, ""sift_w"": 0.5}",0.8381,0.761,0.909,0.8582,0.8043,0.5652,0.8209,0.82,False
+N+S,nearest + TTA + SIFT w=1.0,"{""tta"": true, ""ens_w"": null, ""score"": ""nearest"", ""near_a"": null, ""sift_w"": 1.0}",0.8553,0.778,0.922,0.8758,0.7609,0.6522,0.8209,0.82,False
+M+N+S,margin + TTA + 0.5*nearest + SIFT w=0.5,"{""tta"": true, ""ens_w"": null, ""score"": ""margin"", ""near_a"": 0.5, ""sift_w"": 0.5}",0.843,0.769,0.911,0.8788,0.7391,0.5,0.8209,0.82,False
+M+N+S,margin + TTA + 0.5*nearest + SIFT w=1.0,"{""tta"": true, ""ens_w"": null, ""score"": ""margin"", ""near_a"": 0.5, ""sift_w"": 1.0}",0.864,0.799,0.926,0.8923,0.5652,0.4565,0.8209,0.82,False
+M+N+S,margin + TTA + 1.0*nearest + SIFT w=0.5,"{""tta"": true, ""ens_w"": null, ""score"": ""margin"", ""near_a"": 1.0, ""sift_w"": 0.5}",0.8329,0.757,0.902,0.8668,0.7826,0.5217,0.8209,0.82,False
+M+N+S,margin + TTA + 1.0*nearest + SIFT w=1.0,"{""tta"": true, ""ens_w"": null, ""score"": ""margin"", ""near_a"": 1.0, ""sift_w"": 1.0}",0.8498,0.778,0.916,0.8799,0.7174,0.5,0.8209,0.82,False
+M+N+S,margin + TTA + 2.0*nearest + SIFT w=0.5,"{""tta"": true, ""ens_w"": null, ""score"": ""margin"", ""near_a"": 2.0, ""sift_w"": 0.5}",0.8183,0.739,0.89,0.8568,0.8261,0.5217,0.8209,0.82,False
+M+N+S,margin + TTA + 2.0*nearest + SIFT w=1.0,"{""tta"": true, ""ens_w"": null, ""score"": ""margin"", ""near_a"": 2.0, ""sift_w"": 1.0}",0.8342,0.757,0.904,0.865,0.8043,0.5,0.8209,0.82,False

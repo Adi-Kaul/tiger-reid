@@ -77,3 +77,23 @@ def known_threshold(s_known, keep: float = 0.95) -> float:
 def false_known_rate(s_new, threshold: float) -> float:
     """Share of truly-new tigers wrongly accepted as known (score <= threshold)."""
     return float(np.mean(np.asarray(s_new, dtype=np.float64) <= threshold))
+
+
+def fuse_scores(base, spec: dict, zp: dict, nearest=None, log_inl=None) -> np.ndarray:
+    """Final novelty score (D18/D24) from its parts.
+
+    base    : the spec's embedding score (nearest / centroid / margin), raw.
+    nearest : nearest-image distance, used when spec["near_a"] is set (D24 M+N).
+    log_inl : log1p(max SIFT inliers in the top-10 entities), used when spec["sift_w"] is set.
+    zp      : z-score params {"emb", "near", "sift"} fitted on val known + unknown.
+    With neither extra part, the raw base score is returned (original D18 behaviour).
+    """
+    a, w = spec.get("near_a"), spec.get("sift_w")
+    if a is None and w is None:
+        return np.asarray(base, dtype=np.float64)
+    s = zscore(base, zp["emb"])
+    if a is not None:
+        s = s + a * zscore(nearest, zp["near"])
+    if w is not None:
+        s = s - w * zscore(log_inl, zp["sift"])
+    return s

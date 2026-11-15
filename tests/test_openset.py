@@ -91,3 +91,15 @@ def test_known_threshold_and_false_known_rate():
     assert np.mean(known <= thr) == pytest.approx(0.95, abs=0.01)
     assert false_known_rate(np.array([200.0, 300.0]), thr) == 0.0   # clearly new -> rejected
     assert false_known_rate(np.array([1.0, 200.0]), thr) == 0.5     # one looks known
+
+
+def test_fuse_scores_parts():
+    from tiger_reid.openset import fuse_scores
+    base, near, inl = np.array([0.0, 2.0]), np.array([1.0, 3.0]), np.array([4.0, 0.0])
+    zp = {"emb": (1.0, 1.0), "near": (2.0, 1.0), "sift": (2.0, 2.0)}
+    plain = {"score": "margin", "sift_w": None}
+    assert np.allclose(fuse_scores(base, plain, zp), base)                     # raw, unchanged
+    s = fuse_scores(base, {"sift_w": 1.0}, zp, log_inl=inl)
+    assert np.allclose(s, [-1 - 1, 1 + 1])                                     # many inliers -> known
+    s = fuse_scores(base, {"near_a": 2.0, "sift_w": 0.5}, zp, nearest=near, log_inl=inl)
+    assert np.allclose(s, [-1 + 2 * -1 - 0.5 * 1, 1 + 2 * 1 - 0.5 * -1])       # far from gallery -> new
