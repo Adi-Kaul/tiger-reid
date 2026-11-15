@@ -6,7 +6,7 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 
 ## ▶ START HERE (handoff for the next session, updated Nov 15)
 
-**Nov 15: wild Rajaji labeling is parked (D23 status).** The proposed identity groups didn't look well sorted, so no wild labels for now; scripts stay for later. Focus goes back to Phase 4: Stage A open-set on val with `dinov2b_s0.pt` (still needs downloading into `checkpoints/`), then the one-time test run.
+**Nov 15: Stage A done (D18 rule, ViT-B seed 0, val).** Chosen pipeline: **margin score + TTA + SIFT top-10 re-check (w=1.0)** → val AUROC **0.883** [0.82–0.94] (vs 0.772 plain nearest), rank-1 82%, mAP 0.82 unchanged. ENS (ResNet50) dropped: no AUROC gain ≥0.01 without hurting rank-1/mAP. Caveats: chosen on openset_val (optimistic); w=1.0 is the largest pre-declared weight. Results in `results/openset_val_grid.csv`, `openset_choice.json`. **Next:** test once (D21 C) with this pipeline on dinov2b seeds 0, 1, 2 → mean ± sd; needs seed 1 (17:58) and seed 2 checkpoints downloaded. Wild Rajaji labeling is parked (D23 status): the proposed identity groups didn't look well sorted; scripts stay for later.
 
 **Latest (Nov 13, late): S vs B decided by the pre-declared rule (D22 update): `dinov2b` (ViT-B) is the base model.** Val, best checkpoint, mean ± sd: **ViT-B (4 runs) mAP 0.780 ± 0.040, rank-1 81%, AUROC 0.80** vs **DINOv2-S (3 runs) mAP 0.748 ± 0.014, rank-1 75%, AUROC 0.74**. B wins on all three, but the mAP gap is not significant (Welch t ≈ 1.5), and the post-peak (last-8) means tie at 0.70. So B's edge is at the early-stopped peak, which is the checkpoint we use anyway. **Next:** (1) The user downloads `dinov2b_s0.pt` (adikaul07 Drive `tiger-reid-runs/dinov2b_s0_20261113-0637/`, 345 MB) into `checkpoints/`. (2) Claude runs Stage A (D18): `python scripts/eval_openset.py --stage val --dino checkpoints/dinov2b_s0.pt` (ENS uses the local `resnet50_arcface_s0.pt`, epoch 30). (3) Test once (D21 C) with the chosen pipeline on dinov2b seeds 0, 1, 2 (download s1 17:58 and s2 too) → mean ± sd. Drive connector is on adikaul07.
 
@@ -36,6 +36,31 @@ python scripts/summarize_results.py              # -> results/summary.md
 **Wild data (Nov 12):** no public wild tiger re-ID dataset (images + individual IDs) found. Emails sent Nov 12 asking for wild data: Abishek Harihar (Panthera/NCF, Rajaji NP camera-trap DB on GBIF: 305 images, CC BY-NC, no IDs public, image server down), Wenshuo Li (Bristol, used Rajaji data in arXiv 2512.14878), LILA (info@lila.science). Not contacted (no verified address): WhoAmI authors (WCS India / Edinburgh, 32 wild tigers), China NTLNP camera-trap Amur tiger study. Other leads: wild leopard/hyena camera-trap re-ID sets (arXiv 2607.00804) as a zoo→wild proxy; Zenodo 5573206 = 10 years of Indian tiger capture histories (CSV, CC0, locations centred) for the map/SCR part. Any received data stays out of the repo; drop/coarsen coordinates.
 **Account (Nov 12): use adikaul07@gmail.com for everything** (Drive, Colab, Gmail, git). Runs so far live in the umich Drive `MyDrive/tiger-reid-runs/`; new runs go to the adikaul07 Drive (upload `notebooks/colab_train.ipynb` there; separate Colab GPU quota). **Colab GPU quota hit (Nov 12)** on umich; B1 then ran on adikaul07. Stage A needs `dinov2s_arcface_s0.pt` + Colab `resnet50_arcface_s0.pt` downloaded into `checkpoints/` (the local resnet50 file is the epoch-3 leftover).
 **Still open (optional):** tidy notebook 00.
+
+---
+
+## Nov 15, 2026 (Sun) — Stage A open-set selection
+
+**Done**
+- Parked wild Rajaji labeling (groups not well sorted).
+- Stage A (D18) on val with `dinov2b_s0.pt`:
+
+| step | AUROC [95% CI] | AUROC (all) | rank-1 | mAP |
+|---|---|---|---|---|
+| S1 nearest | 0.772 [0.69–0.85] | 0.837 | 82% | 0.819 |
+| S2 centroid | 0.775 | 0.815 | 82% | 0.819 |
+| S3 margin | 0.795 | 0.843 | 82% | 0.819 |
+| margin + TTA | 0.807 | 0.856 | 82% | 0.820 |
+| + ENS w=0.75 (dropped) | 0.807 | 0.815 | 81% | 0.831 |
+| **+ SIFT w=1.0 (chosen)** | **0.883 [0.82–0.94]** | **0.901** | 82% | 0.820 |
+
+**Findings**
+- SIFT re-checking the top-10 candidates is the big open-set win (+0.08 AUROC over margin+TTA); embeddings rank, SIFT confirms. It doesn't change rank-1/mAP because it only feeds the novelty score.
+- ENS with ResNet50 hurts rank-1 at w≤0.5 and only ties AUROC at 0.75 → dropped by the rule.
+- AUROC rose monotonically with SIFT weight and 1.0 is the grid edge, so a larger weight might do better on val; not tried (grid was fixed in advance, and tuning further on 46 unknowns would overfit).
+
+**Next**
+- Download dinov2b seed 1 (17:58) and seed 2 checkpoints → `--stage test --final` once per seed → mean ± sd.
 
 ---
 

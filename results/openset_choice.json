@@ -1,0 +1,22 @@
+{
+  "spec": {
+    "score": "margin",
+    "tta": true,
+    "ens_w": null,
+    "sift_w": 1.0
+  },
+  "zscore_params": {
+    "emb": [
+      -0.23241760561951494,
+      0.17650720785193924
+    ],
+    "sift": [
+      2.5272450647297235,
+      0.7818971082917643
+    ]
+  },
+  "ckpts": {
+    "dino": "checkpoints/dinov2b_s0.pt",
+    "resnet": "checkpoints/resnet50_arcface_s0.pt"
+  }
+}
