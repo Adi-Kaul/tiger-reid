@@ -59,6 +59,21 @@ python scripts/summarize_results.py              # -> results/summary.md
 - ENS with ResNet50 hurts rank-1 at w≤0.5 and only ties AUROC at 0.75 → dropped by the rule.
 - AUROC rose monotonically with SIFT weight and 1.0 is the grid edge, so a larger weight might do better on val; not tried (grid was fixed in advance, and tuning further on 46 unknowns would overfit).
 
+**Wild novelty check** (`scripts/eval_wild_novelty.py` → `results/wild_novelty.csv`): all 269 Rajaji crops are wild tigers, so none can be in the zoo gallery. Each is scored against the val gallery (test untouched); thresholds keep 95% / 90% of val known queries recognized.
+
+| score | new set | AUROC [CI] | false 'known' @95% / @90% |
+|---|---|---|---|
+| margin+TTA+SIFT (chosen) | val unknowns (46) | 0.883 [0.81–0.94] | 48% / 46% |
+| margin+TTA+SIFT (chosen) | wild all (269) | 0.885 [0.83–0.93] | 49% / 42% |
+| margin+TTA+SIFT (chosen) | wild good only (81) | 0.875 | 59% / 49% |
+| nearest (TTA) | val unknowns | 0.781 | 80% / 52% |
+| nearest (TTA) | wild all | 0.948 [0.91–0.98] | 33% / 9% |
+
+- The chosen score ranks wild tigers as new about as well as val unknowns (AUROC 0.88), but at a threshold that keeps 95% of known tigers, **about half of new tigers (wild or zoo) still get accepted as known**. AUROC hides this; a few known queries with high novelty scores push the threshold up. Those thresholds come from 67 known queries, so they're noisy.
+- Plain nearest distance flags wild images much better (9% false known at 90%): wild night/IR shots sit far from every zoo image. The margin score only looks at the gap between the top two tigers, so it ignores that absolute distance. Part of nearest's win is 'this image looks unusual' (domain shift), not 'this is a different tiger'.
+- Good-quality wild images are harder (59% false known): the clearer the tiger, the more it looks like a gallery tiger.
+- Repeat tigers in the wild set (same animal, several shots) mean fewer independent tigers than 269, so the wild CIs are too narrow.
+
 **Next**
 - Download dinov2b seed 1 (17:58) and seed 2 checkpoints → `--stage test --final` once per seed → mean ± sd.
 

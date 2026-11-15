@@ -1,0 +1,9 @@
+score,new_set,n_new,n_known,auroc,auroc_lo,auroc_hi,false_known@keep95,false_known@keep90,dino
+margin + TTA + SIFT w=1.0,val_unknown,46,67,0.8829,0.813,0.941,0.4783,0.4565,checkpoints/dinov2b_s0.pt
+margin + TTA + SIFT w=1.0,wild_all,269,67,0.8851,0.833,0.932,0.4907,0.4164,checkpoints/dinov2b_s0.pt
+margin + TTA + SIFT w=1.0,wild_good+ok,163,67,0.8643,0.8,0.916,0.589,0.5031,checkpoints/dinov2b_s0.pt
+margin + TTA + SIFT w=1.0,wild_good,81,67,0.8747,0.807,0.928,0.5926,0.4938,checkpoints/dinov2b_s0.pt
+"nearest (plain, TTA)",val_unknown,46,67,0.7813,0.696,0.863,0.8043,0.5217,checkpoints/dinov2b_s0.pt
+"nearest (plain, TTA)",wild_all,269,67,0.9482,0.907,0.98,0.3309,0.0892,checkpoints/dinov2b_s0.pt
+"nearest (plain, TTA)",wild_good+ok,163,67,0.9563,0.918,0.987,0.3006,0.0491,checkpoints/dinov2b_s0.pt
+"nearest (plain, TTA)",wild_good,81,67,0.9549,0.913,0.985,0.284,0.0617,checkpoints/dinov2b_s0.pt

@@ -66,3 +66,14 @@ def zscore_params(*arrays) -> tuple[float, float]:
 def zscore(x, params) -> np.ndarray:
     mu, sd = params
     return (np.asarray(x, dtype=np.float64) - mu) / sd
+
+
+def known_threshold(s_known, keep: float = 0.95) -> float:
+    """Score threshold that still accepts `keep` of the known queries as known
+    (score <= threshold -> "known tiger"). Fixed on val knowns, never on unknowns."""
+    return float(np.quantile(np.asarray(s_known, dtype=np.float64), keep))
+
+
+def false_known_rate(s_new, threshold: float) -> float:
+    """Share of truly-new tigers wrongly accepted as known (score <= threshold)."""
+    return float(np.mean(np.asarray(s_new, dtype=np.float64) <= threshold))

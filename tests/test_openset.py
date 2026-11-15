@@ -82,3 +82,12 @@ def test_tta_views_no_flips_and_shapes():
         assert not any(isinstance(t, (T.RandomHorizontalFlip, T.RandomVerticalFlip))
                        for t in tf.transforms)
         assert tuple(tf(img).shape) == (3, 56, 84)
+
+
+def test_known_threshold_and_false_known_rate():
+    from tiger_reid.openset import false_known_rate, known_threshold
+    known = np.arange(100, dtype=float)          # scores 0..99
+    thr = known_threshold(known, 0.95)
+    assert np.mean(known <= thr) == pytest.approx(0.95, abs=0.01)
+    assert false_known_rate(np.array([200.0, 300.0]), thr) == 0.0   # clearly new -> rejected
+    assert false_known_rate(np.array([1.0, 200.0]), thr) == 0.5     # one looks known
