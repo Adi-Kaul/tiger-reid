@@ -48,7 +48,8 @@ python scripts/summarize_results.py              # -> results/summary.md
 - The IDs exist in Harihar's own population work, so a catalogNumber → tiger-ID table (no images needed) is the cheapest thing to ask for.
 
 **Next**
-- User decides how to use the wild images; Stage A still waits on `dinov2b_s0.pt`.
+- **Later (D23):** fetched 269 images (`scripts/fetch_wild_rajaji.py`), cropped them with a COCO detector (224/269 boxes >0.5), and Claude noted flank and quality for each: 87 left / 64 right usable, 12 frontal, 106 unusable (dark, blur, partial, multi-tiger). Proposals: 133 groups, only 15 with 2+ images (event groups + 7 visual merges incl. 4 images with biologist circle marks). Most cross-event matching is left to the user: Claude's stripe matching at these resolutions was too uncertain to merge more.
+- **Next:** user reviews `data/wild_rajaji/review.html` and exports labels.csv → `python scripts/make_wild_review.py --import labels.csv`. Stage A still waits on `dinov2b_s0.pt`.
 
 ---
 

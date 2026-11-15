@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rajaji ID Review</title>
+<style>
+:root{--bg:#f6f5f2;--card:#fff;--ink:#1d1d1b;--mute:#6b6a65;--line:#e2e0da;--acc:#b4560f;--ok:#2f7d4f;--warn:#b38600;--bad:#a33;}
+@media (prefers-color-scheme:dark){:root{--bg:#161614;--card:#211f1c;--ink:#ece9e2;--mute:#9a978f;--line:#36332e;--acc:#e08a3c;--ok:#5cb37f;--warn:#d9b23a;--bad:#e06666;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 -apple-system,system-ui,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+h1{font-size:16px;margin:0 8px 0 0}
+.tabs button,.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:6px 10px;border-radius:6px;cursor:pointer;font:inherit}
+.tabs button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn.primary{background:var(--acc);border-color:var(--acc);color:#fff}
+.stat{color:var(--mute)}
+details.help{padding:8px 16px;color:var(--mute);max-width:1000px}
+details.help summary{cursor:pointer;color:var(--ink)}
+main{padding:12px 16px 50vh}
+.group{background:var(--card);border:1px solid var(--line);border-radius:10px;margin:0 0 14px;padding:10px}
+.ghead{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.gid{font-weight:600;font-size:15px}
+.basis{color:var(--mute);font-size:12px}
+.tiles{display:flex;gap:10px;flex-wrap:wrap}
+.tile{width:min(280px,100%);border:2px solid transparent;border-radius:8px;padding:4px}
+.tile.sel{border-color:var(--acc)}
+.tile img{width:100%;height:180px;object-fit:contain;background:#000;border-radius:6px;cursor:zoom-in;display:block}
+.cap{font-size:12px;color:var(--mute);margin:4px 0}
+.ctl{display:flex;gap:4px}
+.ctl input{flex:1;min-width:0;padding:4px 6px;border:1px solid var(--line);border-radius:5px;background:var(--bg);color:var(--ink);font:inherit}
+.ctl select{padding:4px;border:1px solid var(--line);border-radius:5px;background:var(--bg);color:var(--ink);font:inherit}
+.c-sure{border-left:4px solid var(--ok)}.c-probable{border-left:4px solid var(--warn)}.c-unsure,.c-skip{border-left:4px solid var(--bad)}
+#tray{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:2px solid var(--acc);padding:8px 16px;display:none;z-index:6;max-height:60vh;overflow:auto}
+#tray.on{display:block}
+#trayimgs{display:flex;gap:8px;overflow-x:auto}
+#trayimgs figure{margin:0;flex:1 1 0;min-width:260px}
+#trayimgs img{width:100%;max-height:48vh;object-fit:contain;background:#000;border-radius:6px}
+#trayimgs figcaption{font-size:12px;color:var(--mute)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Rajaji tiger ID review</h1>
+  <div class="tabs" id="tabs"></div>
+  <span class="stat" id="stat"></span>
+  <span style="flex:1"></span>
+  <button class="btn" id="hidedone">Hide reviewed</button>
+  <button class="btn primary" id="export">Export labels.csv</button>
+</header>
+<details class="help"><summary>How to use</summary>
+<p><b>Groups are Claude's proposals, not truth.</b> "event" groups = same camera, same day, same flank. "circles" / "visual" = Claude's guesses from looking at the crops. Singletons have no proposal yet.</p>
+<p>For each image, set the <b>tiger ID</b> (type any name; images with the same ID are the same tiger) and a <b>confidence</b>: <i>sure</i>, <i>probable</i>, <i>unsure</i>, or <i>skip</i> (unusable). Only compare same-side images: left and right flanks have different stripes. To link a left and right flank of the same tiger (e.g. a frontal shot showing both), give them the same ID and note it.</p>
+<p>Click images to add them to the compare tray at the bottom (side by side, large). Work autosaves in this browser; press Export when done and send me the file.</p>
+</details>
+<main id="main"></main>
+<div id="tray"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b>Compare</b><button class="btn" id="clear">Clear</button></div><div id="trayimgs"></div></div>
+<datalist id="ids"></datalist>
+<script>
+const ROWS = /*DATA*/[];
+const KEY = 'rajaji-labels-v1';
+let labels = {};
+try { labels = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(labels)); } catch (e) {} };
+const lab = k => labels[k] || (labels[k] = { id: (ROWS.find(r => r.gbif_key === k).proposal || ''), conf: '' });
+let tab = 'L', hideDone = false; const tray = [];
+const TABS = { L: 'Left flank', R: 'Right flank', O: 'Frontal / unusable' };
+
+function cap(r) { return `${r.gbif_key.slice(-4)} · ${r.year} · st ${r.station}${r.side} · ${r.date ? r.date.slice(5) : 'no date'} · ${r.sex || '?'}${r.multi ? ' · MULTI-TIGER EVENT' : ''}`; }
+
+function render() {
+  document.getElementById('tabs').innerHTML = Object.entries(TABS).map(([k, v]) => `<button data-t="${k}" class="${k === tab ? 'on' : ''}">${v}</button>`).join('');
+  const rows = ROWS.filter(r => tab === 'O' ? !['L', 'R'].includes(r.flank) || !r.proposal : r.flank === tab && r.proposal);
+  const groups = {};
+  for (const r of rows) (groups[tab === 'O' ? 'unusable-' + r.flank : r.proposal] ||= []).push(r);
+  const order = Object.entries(groups).sort((a, b) => (b[1].length > 1) - (a[1].length > 1) || (a[1][0].date || '').localeCompare(b[1][0].date || ''));
+  document.getElementById('ids').innerHTML = [...new Set(ROWS.map(r => lab(r.gbif_key).id).filter(Boolean))].sort().map(i => `<option value="${i}">`).join('');
+  document.getElementById('main').innerHTML = order.map(([g, rs]) => {
+    if (hideDone && rs.every(r => lab(r.gbif_key).conf)) return '';
+    return `<section class="group"><div class="ghead"><span class="gid">${g}</span><span class="basis">${rs[0].basis || (rs.length > 1 ? '' : 'singleton')}</span>
+      ${tab !== 'O' ? `<button class="btn" data-all="sure" data-g="${g}">All sure</button><button class="btn" data-all="probable" data-g="${g}">All probable</button>` : ''}</div>
+      <div class="tiles">${rs.map(r => { const l = lab(r.gbif_key); return `<div class="tile ${tray.includes(r.gbif_key) ? 'sel' : ''} ${l.conf ? 'c-' + l.conf : ''}">
+        <img loading="lazy" src="crops/${r.gbif_key}.jpg" data-k="${r.gbif_key}" alt="${r.gbif_key}">
+        <div class="cap">${cap(r)}</div>
+        <div class="ctl"><input list="ids" value="${l.id}" data-id="${r.gbif_key}" placeholder="tiger ID">
+        <select data-c="${r.gbif_key}">${['', 'sure', 'probable', 'unsure', 'skip'].map(c => `<option ${c === l.conf ? 'selected' : ''} value="${c}">${c || '—'}</option>`).join('')}</select></div></div>`; }).join('')}</div></section>`;
+  }).join('');
+  const done = ROWS.filter(r => (labels[r.gbif_key] || {}).conf).length;
+  document.getElementById('stat').textContent = `${done} / ${ROWS.length} reviewed`;
+  renderTray();
+}
+function renderTray() {
+  const t = document.getElementById('tray'); t.classList.toggle('on', tray.length > 0);
+  document.getElementById('trayimgs').innerHTML = tray.map(k => { const r = ROWS.find(x => x.gbif_key === k); return `<figure><img src="crops/${k}.jpg"><figcaption>${cap(r)} · ID ${lab(k).id || '—'}</figcaption></figure>`; }).join('');
+}
+document.addEventListener('click', e => {
+  const t = e.target;
+  if (t.dataset.t) { tab = t.dataset.t; render(); }
+  else if (t.dataset.k) { const i = tray.indexOf(t.dataset.k); i >= 0 ? tray.splice(i, 1) : tray.push(t.dataset.k); render(); }
+  else if (t.dataset.all) { ROWS.filter(r => r.proposal === t.dataset.g).forEach(r => lab(r.gbif_key).conf = t.dataset.all); save(); render(); }
+  else if (t.id === 'clear') { tray.length = 0; render(); }
+  else if (t.id === 'hidedone') { hideDone = !hideDone; t.textContent = hideDone ? 'Show all' : 'Hide reviewed'; render(); }
+  else if (t.id === 'export') {
+    const lines = ['gbif_key,flank,proposal,tiger_id,confidence'];
+    for (const r of ROWS) { const l = labels[r.gbif_key] || { id: r.proposal || '', conf: '' }; lines.push([r.gbif_key, r.flank, r.proposal, `"${(l.id || '').replace(/"/g, '""')}"`, l.conf].join(',')); }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' })); a.download = 'labels.csv'; a.click();
+  }
+});
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t.dataset.id) { lab(t.dataset.id).id = t.value.trim(); save(); renderTray(); }
+  if (t.dataset.c) { lab(t.dataset.c).conf = t.value; save(); render(); }
+});
+render();
+</script>
+</body>
+</html>
