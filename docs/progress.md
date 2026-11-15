@@ -30,9 +30,25 @@ python scripts/eval_sift.py --stage test          # ~5 min
 python scripts/summarize_results.py              # -> results/summary.md
 ```
 
+**Wild data (Nov 14 update): Harihar replied.** He pointed back to the GBIF Rajaji dataset; the rest would need Wildlife Institute of India permission ("complicated"). He did not answer the individual-ID question. Checked via the GBIF API: **no individual IDs anywhere** (organismID/remarks empty; catalog number = year + station + camera side A/B + frame). The original image server is down, but **GBIF caches 269/305 full images (1024×768)**, real camera-trap shots (night IR, fog, partial bodies). Labels available: sex (114 F / 32 M / 123 unknown), date, station. Records carry fine coordinates + locality names: never commit them. Open: how to use unlabeled wild images (user decision).
 **Wild data (Nov 12):** no public wild tiger re-ID dataset (images + individual IDs) found. Emails sent Nov 12 asking for wild data: Abishek Harihar (Panthera/NCF, Rajaji NP camera-trap DB on GBIF: 305 images, CC BY-NC, no IDs public, image server down), Wenshuo Li (Bristol, used Rajaji data in arXiv 2512.14878), LILA (info@lila.science). Not contacted (no verified address): WhoAmI authors (WCS India / Edinburgh, 32 wild tigers), China NTLNP camera-trap Amur tiger study. Other leads: wild leopard/hyena camera-trap re-ID sets (arXiv 2607.00804) as a zoo→wild proxy; Zenodo 5573206 = 10 years of Indian tiger capture histories (CSV, CC0, locations centred) for the map/SCR part. Any received data stays out of the repo; drop/coarsen coordinates.
 **Account (Nov 12): use adikaul07@gmail.com for everything** (Drive, Colab, Gmail, git). Runs so far live in the umich Drive `MyDrive/tiger-reid-runs/`; new runs go to the adikaul07 Drive (upload `notebooks/colab_train.ipynb` there; separate Colab GPU quota). **Colab GPU quota hit (Nov 12)** on umich; B1 then ran on adikaul07. Stage A needs `dinov2s_arcface_s0.pt` + Colab `resnet50_arcface_s0.pt` downloaded into `checkpoints/` (the local resnet50 file is the epoch-3 leftover).
 **Still open (optional):** tidy notebook 00.
+
+---
+
+## Nov 14, 2026 (Sat) — wild-data reply
+
+**Done**
+- Read Abishek Harihar's reply (Panthera): use the GBIF dataset; missing images need WII permission.
+- Probed GBIF dataset `e61455a4-…`: 305 records, all with one image; **0 individual IDs**; 269 images still served from GBIF's image cache at full 1024×768, 36 not (504, origin `ibif.gov.in` down).
+
+**Findings**
+- Usable as an *unlabeled* zoo→wild set, not a re-ID benchmark as-is. Weak labels: sex (cross-sex pairs are certainly different tigers), camera station + time (same-camera bursts are almost surely the same tiger).
+- The IDs exist in Harihar's own population work, so a catalogNumber → tiger-ID table (no images needed) is the cheapest thing to ask for.
+
+**Next**
+- User decides how to use the wild images; Stage A still waits on `dinov2b_s0.pt`.
 
 ---
 
