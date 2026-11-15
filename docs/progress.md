@@ -4,7 +4,9 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 
 ---
 
-## ▶ START HERE (handoff for the next session, updated Nov 13)
+## ▶ START HERE (handoff for the next session, updated Nov 15)
+
+**Nov 15: wild Rajaji labeling is parked (D23 status).** The proposed identity groups didn't look well sorted, so no wild labels for now; scripts stay for later. Focus goes back to Phase 4: Stage A open-set on val with `dinov2b_s0.pt` (still needs downloading into `checkpoints/`), then the one-time test run.
 
 **Latest (Nov 13, late): S vs B decided by the pre-declared rule (D22 update): `dinov2b` (ViT-B) is the base model.** Val, best checkpoint, mean ± sd: **ViT-B (4 runs) mAP 0.780 ± 0.040, rank-1 81%, AUROC 0.80** vs **DINOv2-S (3 runs) mAP 0.748 ± 0.014, rank-1 75%, AUROC 0.74**. B wins on all three, but the mAP gap is not significant (Welch t ≈ 1.5), and the post-peak (last-8) means tie at 0.70. So B's edge is at the early-stopped peak, which is the checkpoint we use anyway. **Next:** (1) The user downloads `dinov2b_s0.pt` (adikaul07 Drive `tiger-reid-runs/dinov2b_s0_20261113-0637/`, 345 MB) into `checkpoints/`. (2) Claude runs Stage A (D18): `python scripts/eval_openset.py --stage val --dino checkpoints/dinov2b_s0.pt` (ENS uses the local `resnet50_arcface_s0.pt`, epoch 30). (3) Test once (D21 C) with the chosen pipeline on dinov2b seeds 0, 1, 2 (download s1 17:58 and s2 too) → mean ± sd. Drive connector is on adikaul07.
 
@@ -49,7 +51,7 @@ python scripts/summarize_results.py              # -> results/summary.md
 
 **Next**
 - **Later (D23):** fetched 269 images (`scripts/fetch_wild_rajaji.py`), cropped them with a COCO detector (224/269 boxes >0.5), and Claude noted flank and quality for each: 87 left / 64 right usable, 12 frontal, 106 unusable (dark, blur, partial, multi-tiger). Proposals: 133 groups, only 15 with 2+ images (event groups + 7 visual merges incl. 4 images with biologist circle marks). Most cross-event matching is left to the user: Claude's stripe matching at these resolutions was too uncertain to merge more.
-- **Next:** user reviews `data/wild_rajaji/review.html` and exports labels.csv → `python scripts/make_wild_review.py --import labels.csv`. Stage A still waits on `dinov2b_s0.pt`.
+- **Next:** ~~user reviews `data/wild_rajaji/review.html`~~ parked Nov 15 (groups not well sorted). Stage A still waits on `dinov2b_s0.pt`.
 
 ---
 
