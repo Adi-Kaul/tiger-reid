@@ -4,11 +4,11 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 
 ---
 
-## ▶ START HERE (handoff for the next session, updated Nov 16)
+## START HERE (handoff for the next session, updated Nov 16)
 
 **Where we are:** Phase 4, final steps. Base model is **`dinov2b`** (DINOv2 ViT-B/14 + ArcFace, 224 px; D22): 4-run val mAP 0.78 ± 0.04, rank-1 81%. Open-set pipeline chosen on val (D18): **margin score + 5-crop TTA + SIFT re-check of the top-10 entities (w=1)** → val AUROC **0.883** [0.82–0.94], rank-1 82%, mAP 0.82 (seed 0). **Test set still untouched.**
 
-**⏸ Open decision (user asked to hold it): D26, how to pick the open-set threshold.** At a threshold that keeps 95% of known tigers recognized, ~half of new tigers are wrongly accepted as known (val 48%, wild 49%). Cause: the hardest ~5–10% of known queries show a view whose side isn't in the gallery (rear, frontal, crouched, behind a fence), so no matcher can line up the stripes (D25 result). Proposal: set the threshold for a **false-yes target** on val and send everything above it to human review. D18 pipeline on val: 5% false yes → 69% of knowns auto-recognized; 10% → 79%. Options: 5%, 10%, or report both. See `docs/learning/05-open-set.md`.
+**Open decision (user asked to hold it): D26, how to pick the open-set threshold.** At a threshold that keeps 95% of known tigers recognized, ~half of new tigers are wrongly accepted as known (val 48%, wild 49%). Cause: the hardest ~5–10% of known queries show a view whose side isn't in the gallery (rear, frontal, crouched, behind a fence), so no matcher can line up the stripes (D25 result). Proposal: set the threshold for a **false-yes target** on val and send everything above it to human review. D18 pipeline on val: 5% false yes → 69% of knowns auto-recognized; 10% → 79%. Options: 5%, 10%, or report both. See `docs/learning/05-open-set.md`.
 
 **What was tried for the false yes's (all on val, all pre-declared, test untouched):**
 - D24 add absolute nearest distance → worse (best 0.864). It only helps on wild images (domain shift).

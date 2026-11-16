@@ -21,24 +21,24 @@ Rapid-development mode (since Nov 10, 2026): no due dates, aim for results fast,
 - **Wild data (Rajaji, GBIF): 269 images, no individual IDs.** Used only as an "all new tigers" check against the zoo gallery (`scripts/eval_wild_novelty.py`), never to choose anything. Hand labeling (D23) is parked. Fine coordinates in the records: never commit.
 - Local matching uses `kornia` (DISK + LightGlue), pinned in `requirements.txt`.
 
-## Phase 0: Setup ✅ mostly
+## Phase 0: Setup (mostly done)
 - [x] Repo, docs, download script, ATRW re-ID downloaded
 - [x] Exploration notebook + 20-entity grid
 - [x] `tiger_reid` installable, `data.load_labeled()`
 - [x] Switch to rapid mode
 
-## Phase 1: Pseudo-clips + frozen splits ✅
+## Phase 1: Pseudo-clips + frozen splits (done)
 - [x] Pseudo-clips: thumbnail cosine similarity + connected components; threshold 0.4 frozen (decisions D3–D4)
 - [x] Splits: 20% entities open-set (half val, half test); known entities split by clip into train/val/test (D5–D6)
 - [x] Leakage tests on the real split file
 - **Checkpoint:** `splits/splits_v1.csv` committed, tests green.
 
-## Phase 2: Evaluation module ✅
+## Phase 2: Evaluation module (done)
 - [x] Rank-1/5, mAP, open-set AUROC + unit tests (`metrics.py`, D9)
 - [x] `eval_sets()`, `log_result()` → `results/results.csv`; chance floor logged
 - **Checkpoint:** one `evaluate()` used by every method.
 
-## Phase 3: Baselines ✅
+## Phase 3: Baselines (done)
 - [x] `ReidDataset`
 - [x] Off-the-shelf ResNet50 + DINOv2 features (no training): test rank-1 42.9% / 50.5%, AUROC ≈ chance (D11)
 - [x] Open-set protocol fixed: matched unknowns + bootstrap CIs (D10)
@@ -63,7 +63,7 @@ Rapid-development mode (since Nov 10, 2026): no due dates, aim for results fast,
 - [x] Wild novelty check (all 269 Rajaji images are new): AUROC 0.885, but ~half accepted as known at keep-95%
 - [x] D24 nearest-distance candidates: none better (0.864). D25 DISK + LightGlue re-check: 0.890, under the +0.01 bar
 - [x] Error analysis: keep-95% false yes's come from unmatched views of known tigers, plus same-zoo look-alikes
-- [ ] ⏸ D26 threshold rule (false-yes target + human review), waiting on the user
+- [ ] (on hold) D26 threshold rule (false-yes target + human review), waiting on the user
 - [ ] Fix `eval_openset.py --final` for multi-seed: per-seed val z-score params + threshold, log the real seed
 - [ ] Download `dinov2b` seeds 1–2 → test once on seeds 0–2 (D21 C)
 - [ ] (optional) ResNet50 triplet; MegaDescriptor (check ATRW contamination first)

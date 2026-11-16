@@ -10,12 +10,12 @@ Sort the gallery by distance for each query. **Rank-k** = fraction of queries wi
 ## mAP (mean average precision)
 Rank-1 only looks at the first hit. **AP** for one query looks at *every* correct gallery image: at each rank where a correct one appears, compute precision (correct so far / items seen so far), then average those. mAP = mean AP over queries.
 
-Worked example (gallery = A, A, B):
+Worked example (gallery = A, A, B; bold = the right tiger):
 
 | query | ranking | hits at ranks | AP |
 |---|---|---|---|
-| A | A ✓, B, A ✓ | 1, 3 | (1/1 + 2/3) / 2 = 0.833 |
-| B | A, A, B ✓ | 3 | 1/3 = 0.333 |
+| A | **A**, B, **A** | 1, 3 | (1/1 + 2/3) / 2 = 0.833 |
+| B | A, A, **B** | 3 | 1/3 = 0.333 |
 
 Rank-1 = 0.5, mAP = 0.583. mAP is stricter: query B got rank-3 right but is punished for the two wrong images above it.
 

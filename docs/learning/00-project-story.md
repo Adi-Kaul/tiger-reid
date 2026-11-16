@@ -85,7 +85,7 @@ The photos are **video frames**. Two frames a split second apart are near-identi
 
 **Run order:** smoke test → ResNet50 + ArcFace → ResNet50 + triplet → DINOv2 + ArcFace → MegaDescriptor → best × 3 seeds.
 
-**⚠ MegaDescriptor:** pretrained on animal re-ID datasets that very likely **include ATRW**, so it may have seen our test photos. Check its training sources first. If ATRW is included, skip it or report it separately with a warning.
+**Caution, MegaDescriptor:** pretrained on animal re-ID datasets that very likely **include ATRW**, so it may have seen our test photos. Check its training sources first. If ATRW is included, skip it or report it separately with a warning.
 
 **Expectations:** biggest gain should be new-tiger AUROC (that's what the loss teaches), and rank-1/mAP should rise too. If training doesn't clearly beat SIFT given the wide intervals, that's a legitimate finding, reported honestly.
 
