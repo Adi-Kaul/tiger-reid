@@ -13,3 +13,4 @@ scipy
 pyyaml
 pytest
 tabulate
+kornia==0.7.3

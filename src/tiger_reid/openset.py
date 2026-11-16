@@ -79,21 +79,38 @@ def false_known_rate(s_new, threshold: float) -> float:
     return float(np.mean(np.asarray(s_new, dtype=np.float64) <= threshold))
 
 
-def fuse_scores(base, spec: dict, zp: dict, nearest=None, log_inl=None) -> np.ndarray:
+def fuse_scores(base, spec: dict, zp: dict, nearest=None, log_inl=None, log_lg=None) -> np.ndarray:
     """Final novelty score (D18/D24) from its parts.
 
     base    : the spec's embedding score (nearest / centroid / margin), raw.
     nearest : nearest-image distance, used when spec["near_a"] is set (D24 M+N).
     log_inl : log1p(max SIFT inliers in the top-10 entities), used when spec["sift_w"] is set.
-    zp      : z-score params {"emb", "near", "sift"} fitted on val known + unknown.
+    log_lg  : log1p(max DISK+LightGlue inliers, D25), used when spec["lg_w"] is set.
+    zp      : z-score params {"emb", "near", "sift", "lg"} fitted on val known + unknown.
     With neither extra part, the raw base score is returned (original D18 behaviour).
     """
-    a, w = spec.get("near_a"), spec.get("sift_w")
-    if a is None and w is None:
+    a, w, lw = spec.get("near_a"), spec.get("sift_w"), spec.get("lg_w")
+    if a is None and w is None and lw is None:
         return np.asarray(base, dtype=np.float64)
     s = zscore(base, zp["emb"])
     if a is not None:
         s = s + a * zscore(nearest, zp["near"])
     if w is not None:
         s = s - w * zscore(log_inl, zp["sift"])
+    if lw is not None:
+        s = s - lw * zscore(log_lg, zp["lg"])
     return s
+
+
+def top_images_per_entity(img_dist: np.ndarray, g_labels, top_ents: np.ndarray, n: int = 5) -> list[np.ndarray]:
+    """D25 candidates: for each query, the n gallery images (nearest by embedding)
+    of each of its top entities. -> list of gallery index arrays."""
+    g_labels = np.asarray(g_labels)
+    out = []
+    for i, ents in enumerate(top_ents):
+        idx = []
+        for e in ents:
+            members = np.flatnonzero(g_labels == e)
+            idx.extend(members[np.argsort(img_dist[i, members], kind="stable")[:n]])
+        out.append(np.asarray(idx, dtype=int))
+    return out

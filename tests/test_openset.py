@@ -103,3 +103,25 @@ def test_fuse_scores_parts():
     assert np.allclose(s, [-1 - 1, 1 + 1])                                     # many inliers -> known
     s = fuse_scores(base, {"near_a": 2.0, "sift_w": 0.5}, zp, nearest=near, log_inl=inl)
     assert np.allclose(s, [-1 + 2 * -1 - 0.5 * 1, 1 + 2 * 1 - 0.5 * -1])       # far from gallery -> new
+
+
+def test_top_images_per_entity_and_lg_term():
+    from tiger_reid.openset import fuse_scores, top_images_per_entity
+    g_lab = np.array([1, 1, 1, 2, 2, 3])
+    dist = np.array([[0.9, 0.1, 0.5, 0.3, 0.2, 0.0]])
+    cand = top_images_per_entity(dist, g_lab, np.array([[2, 1]]), n=2)
+    assert list(cand[0]) == [4, 3, 1, 2]        # entity 2 nearest-first, then entity 1's best two
+    zp = {"emb": (0.0, 1.0), "lg": (1.0, 1.0)}
+    s = fuse_scores(np.array([0.0, 0.0]), {"lg_w": 2.0}, zp, log_lg=np.array([3.0, 0.0]))
+    assert np.allclose(s, [-4.0, 2.0])          # many LightGlue inliers -> known
+
+
+def test_ransac_inliers_on_exact_homography():
+    from tiger_reid.local_match import ransac_inliers
+    rng = np.random.default_rng(0)
+    src = rng.uniform(0, 100, (30, 2))
+    dst = src * 1.5 + 7                          # pure scale + shift: all inliers
+    dst_bad = dst.copy(); dst_bad[:10] = rng.uniform(0, 150, (10, 2))
+    assert ransac_inliers(src, dst) == 30
+    assert 18 <= ransac_inliers(src, dst_bad) <= 21
+    assert ransac_inliers(src[:3], dst[:3]) == 0

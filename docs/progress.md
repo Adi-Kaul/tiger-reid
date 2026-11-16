@@ -8,6 +8,8 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 
 **Nov 15: Stage A done (D18 rule, ViT-B seed 0, val).** Chosen pipeline: **margin score + TTA + SIFT top-10 re-check (w=1.0)** → val AUROC **0.883** [0.82–0.94] (vs 0.772 plain nearest), rank-1 82%, mAP 0.82 unchanged. ENS (ResNet50) dropped: no AUROC gain ≥0.01 without hurting rank-1/mAP. Caveats: chosen on openset_val (optimistic); w=1.0 is the largest pre-declared weight. Wild check: AUROC 0.885 on 269 Rajaji images, but ~half of new tigers (wild or zoo) are accepted as known at a keep-95% threshold. D24 (adding nearest distance) didn't beat it, so D18 stays. Results in `results/openset_val_grid.csv`, `openset_choice.json`. **Next:** test once (D21 C) with this pipeline on dinov2b seeds 0, 1, 2 → mean ± sd; needs seed 1 (17:58) and seed 2 checkpoints downloaded. Wild Rajaji labeling is parked (D23 status): the proposed identity groups didn't look well sorted; scripts stay for later.
 
+**Nov 16:** error analysis + D25 (LightGlue) → D18 still kept. The false-yes rate at keep-95% is limited by known queries whose side isn't in the gallery (rear/frontal/fence views). Proposed fix: choose the threshold by a false-yes target and send the rest to review (D26, awaiting user OK). At 5% false-yes on val, 69% of knowns are auto-recognized.
+
 **Latest (Nov 13, late): S vs B decided by the pre-declared rule (D22 update): `dinov2b` (ViT-B) is the base model.** Val, best checkpoint, mean ± sd: **ViT-B (4 runs) mAP 0.780 ± 0.040, rank-1 81%, AUROC 0.80** vs **DINOv2-S (3 runs) mAP 0.748 ± 0.014, rank-1 75%, AUROC 0.74**. B wins on all three, but the mAP gap is not significant (Welch t ≈ 1.5), and the post-peak (last-8) means tie at 0.70. So B's edge is at the early-stopped peak, which is the checkpoint we use anyway. **Next:** (1) The user downloads `dinov2b_s0.pt` (adikaul07 Drive `tiger-reid-runs/dinov2b_s0_20261113-0637/`, 345 MB) into `checkpoints/`. (2) Claude runs Stage A (D18): `python scripts/eval_openset.py --stage val --dino checkpoints/dinov2b_s0.pt` (ENS uses the local `resnet50_arcface_s0.pt`, epoch 30). (3) Test once (D21 C) with the chosen pipeline on dinov2b seeds 0, 1, 2 (download s1 17:58 and s2 too) → mean ± sd. Drive connector is on adikaul07.
 
 **Where we are:** Phases 0–3 done. **Phase 4 in progress.** Two full runs on Colab T4 (val, seed 0): **ResNet50+ArcFace** rank-1 70%, mAP 0.69, AUROC 0.75; **DINOv2-S+ArcFace (lr 3e-5)** rank-1 **76%**, mAP **0.76**, AUROC 0.76 (best epoch 11, early stop at 19, 12 min). DINOv2 leads on rank-1/mAP, ties on AUROC; one seed and overlapping CIs. Weights in Drive `MyDrive/tiger-reid-runs/`. Notebook in Drive: `colab_train_v4.ipynb` (older copies superseded). **Next (D17):** ResNet50+triplet, then best on val → 3 seeds → `--eval-test` once → SIFT top-k fusion (D16).
@@ -36,6 +38,24 @@ python scripts/summarize_results.py              # -> results/summary.md
 **Wild data (Nov 12):** no public wild tiger re-ID dataset (images + individual IDs) found. Emails sent Nov 12 asking for wild data: Abishek Harihar (Panthera/NCF, Rajaji NP camera-trap DB on GBIF: 305 images, CC BY-NC, no IDs public, image server down), Wenshuo Li (Bristol, used Rajaji data in arXiv 2512.14878), LILA (info@lila.science). Not contacted (no verified address): WhoAmI authors (WCS India / Edinburgh, 32 wild tigers), China NTLNP camera-trap Amur tiger study. Other leads: wild leopard/hyena camera-trap re-ID sets (arXiv 2607.00804) as a zoo→wild proxy; Zenodo 5573206 = 10 years of Indian tiger capture histories (CSV, CC0, locations centred) for the map/SCR part. Any received data stays out of the repo; drop/coarsen coordinates.
 **Account (Nov 12): use adikaul07@gmail.com for everything** (Drive, Colab, Gmail, git). Runs so far live in the umich Drive `MyDrive/tiger-reid-runs/`; new runs go to the adikaul07 Drive (upload `notebooks/colab_train.ipynb` there; separate Colab GPU quota). **Colab GPU quota hit (Nov 12)** on umich; B1 then ran on adikaul07. Stage A needs `dinov2s_arcface_s0.pt` + Colab `resnet50_arcface_s0.pt` downloaded into `checkpoints/` (the local resnet50 file is the epoch-3 leftover).
 **Still open (optional):** tidy notebook 00.
+
+---
+
+## Nov 16, 2026 (Mon) — chasing the false yes's
+
+**Done**
+- Error analysis of the D18 open-set failures on val (contact sheets in the scratchpad, not committed).
+- D25 (pre-declared): DISK + LightGlue re-check (`src/tiger_reid/local_match.py`, kornia 0.7.3), 5 candidates. Not adopted (best 0.890 < 0.893).
+- `eval_openset.py`: `Ctx.add_set` for extra image sets, generic `select_extra` (D24/D25), LightGlue term in `fuse_scores`. `eval_wild_novelty.py` now reuses it.
+
+**Findings**
+- Known queries that look new are **view changes** (rear, crouched, frontal, behind a fence) whose side isn't in the gallery. Unknowns that look known are **other tigers from the same zoo** (same ground, fences, light).
+- The 46 val unknowns are only **7 tigers**; entity 250 looks like a mislabeled image of known 247 (same scene and moment, 159 SIFT inliers). Kept in (D25 data note).
+- LightGlue: known median 76 inliers vs unknown median 22 (SIFT 16 vs 6), but the hardest 10% of knowns get ≤16 with either matcher. So the keep-95% false-yes rate is limited by gallery coverage, not the matcher.
+- Turning it around (D18 pipeline, val): at **5% false "known" on val unknowns, 69% of known tigers are recognized automatically** (unknown_all false-known 9%); at 10%: 79% (unknown_all 14%). The rest would go to human review. Plain nearest distance: 51% / 58%. Caveat: 5% of 46 unknowns is ~2 images.
+
+**Next**
+- User decision: report the operating point as a false-yes target with a "review" bucket (proposed D26), instead of keep-95% of knowns.
 
 ---
 
