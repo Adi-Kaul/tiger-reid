@@ -16,7 +16,8 @@ camera-trap image
 [2] Re-ID embedding  ★    CNN / ViT backbone trained with triplet or ArcFace loss
    │                      → a vector where same tiger = close, different tiger = far
    ▼
-[3] Match or "new tiger" ★  nearest neighbor in the gallery, or reject if too far
+[3] Match or "new tiger" ★  nearest tigers in the gallery; their top-10 re-checked with
+   │                      SIFT stripe matching; "new" (or human review) if nothing fits
    │
    ▼
 [4] Sightings table       (tiger ID, camera, time)
@@ -68,8 +69,9 @@ src/tiger_reid/   the reusable code: datasets, models, losses, evaluation
 | What | Metric | Setup |
 |---|---|---|
 | Detection | Recall of tiger crops | MegaDetector vs. ground-truth boxes |
+| Zoo → wild | Share of wild tigers flagged "new" | 269 wild Rajaji camera-trap images (GBIF), all unseen |
 | Closed-set re-ID | Rank-1, Rank-5, mAP | Standard ATRW query/gallery split |
-| Open-set re-ID | AUROC for "new tiger" + rank-1 on known | ~20% of individuals held out of training |
+| Open-set re-ID | AUROC for "new tiger", false-yes rate at a fixed threshold, rank-1 on known | ~20% of individuals held out of training |
 | Hard cases | Rank-1 per condition | By pose, flank side, image quality |
 | Baseline | Same metrics | SIFT keypoint matching, identical splits |
 | Ablations | Rank-1, mAP | CNN vs ViT, triplet vs ArcFace, flank-aware vs flank-blind |
@@ -98,4 +100,4 @@ Training runs on a single GPU (Colab Pro, Kaggle, or the university cluster).
 
 ## Status
 
-See [`docs/roadmap.md`](docs/roadmap.md) for the plan and [`docs/progress.md`](docs/progress.md) for the daily log. Currently in **Phase 4: metric learning** (rapid-development mode).
+See [`docs/roadmap.md`](docs/roadmap.md) for the plan and [`docs/progress.md`](docs/progress.md) for the daily log. Currently finishing **Phase 4: metric learning** (rapid-development mode): model and open-set pipeline chosen on val, test run pending the threshold rule (D26).

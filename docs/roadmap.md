@@ -16,7 +16,10 @@ Rapid-development mode (since Nov 10, 2026): no due dates, aim for results fast,
 - **No horizontal flips** in augmentation (mirrors the stripes).
 - **License CC BY-NC-SA 4.0.** Cite Li et al. 2019 (arXiv:1906.05586).
 - **Compute: full training runs go on Colab** (`notebooks/colab_train.ipynb`, T4 GPU, results → Google Drive `tiger-reid-runs/`), see D14. The 8 GB M2 is too slow (~70 s/epoch) and the first full run died at epoch 3. Local `mps` is fine for tests, smoke runs and evaluation.
-- Still open from Oct 6 (optional now): email a professor about wild camera-trap data.
+- **Val open-set is tiny too: 46 matched unknown images of only 7 tigers.** One of them (entity 250) looks like a mislabeled image of known 247. Kept in, reported (D25).
+- **AUROC hides the false yes's.** At a threshold keeping 95% of knowns recognized, ~half of new tigers are accepted as known. The cause is known queries whose visible side isn't in the gallery (rear, frontal, fence), not the matcher (D25). The threshold rule is an open user decision (D26).
+- **Wild data (Rajaji, GBIF): 269 images, no individual IDs.** Used only as an "all new tigers" check against the zoo gallery (`scripts/eval_wild_novelty.py`), never to choose anything. Hand labeling (D23) is parked. Fine coordinates in the records: never commit.
+- Local matching uses `kornia` (DISK + LightGlue), pinned in `requirements.txt`.
 
 ## Phase 0: Setup ✅ mostly
 - [x] Repo, docs, download script, ATRW re-ID downloaded
@@ -56,17 +59,24 @@ Rapid-development mode (since Nov 10, 2026): no due dates, aim for results fast,
 - [x] `dinov2b` seed 2 (val mAP 0.803). 4-run mean: mAP 0.78 ± 0.04, rank-1 81%, AUROC 0.80
 - [x] `dinov2s_arcface` seed 1 (val mAP 0.742, AUROC 0.68)
 - [x] `dinov2s_arcface` seed 2 (val mAP 0.738). S (3 runs) mAP 0.748 ± 0.014 vs B (4 runs) 0.780 ± 0.040: **`dinov2b` is the base** (rule; not significant)
-- [ ] Stage A open-set scoring on `dinov2b_s0.pt` (D18)
-- [ ] Runs: ResNet50 triplet; best × 3 seeds; test once; (MegaDescriptor optional)
+- [x] Stage A open-set scoring on `dinov2b_s0.pt` (D18): margin + TTA + SIFT top-10 re-check, val AUROC 0.883 (from 0.772)
+- [x] Wild novelty check (all 269 Rajaji images are new): AUROC 0.885, but ~half accepted as known at keep-95%
+- [x] D24 nearest-distance candidates: none better (0.864). D25 DISK + LightGlue re-check: 0.890, under the +0.01 bar
+- [x] Error analysis: keep-95% false yes's come from unmatched views of known tigers, plus same-zoo look-alikes
+- [ ] ⏸ D26 threshold rule (false-yes target + human review), waiting on the user
+- [ ] Fix `eval_openset.py --final` for multi-seed: per-seed val z-score params + threshold, log the real seed
+- [ ] Download `dinov2b` seeds 1–2 → test once on seeds 0–2 (D21 C)
+- [ ] (optional) ResNet50 triplet; MegaDescriptor (check ATRW contamination first)
 - **Improvements under active consideration** (try after the first full runs, chosen on val):
   - **DINOv2 fine-tuned:** best untrained mAP (test 0.375); likely the strongest backbone.
-  - **SIFT re-ranking:** re-score the embedding's top-k with SIFT inlier counts. SIFT is the only baseline above chance at spotting new tigers, so this mainly targets open-set AUROC.
+  - ~~**SIFT re-ranking**~~ done as the D18 top-10 re-check (+0.08 val AUROC).
+  - **Ideas not yet tried for false yes's:** background masking (same-zoo look-alikes match on ground/fences); a 3-way known / review / new rule.
   - **Higher resolution once trained:** stripes are fine detail; size didn't matter untrained (D11) but may after fine-tuning (e.g. 224×448 for flank crops).
   - **≥3 seeds** for the final configs (cheap on Colab).
 - **Checkpoint:** closed-set table vs. baselines.
 
 ## Phase 5: Open-set + robustness
-- [ ] Threshold on `openset_val`; AUROC / TPR / rank-1 on test
+- [ ] Threshold on `openset_val` (rule = D26); AUROC, false-yes rate, knowns auto-recognized, rank-1 on test
 - [ ] Zoo→wild stress test (grayscale, blur, crop); optional augmentation retrain
 - [ ] Per-pose breakdown if keypoints allow
 - **Checkpoint:** core results frozen.

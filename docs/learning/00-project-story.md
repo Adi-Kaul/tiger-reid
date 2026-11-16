@@ -88,3 +88,11 @@ The photos are **video frames**. Two frames a split second apart are near-identi
 **⚠ MegaDescriptor:** pretrained on animal re-ID datasets that very likely **include ATRW**, so it may have seen our test photos. Check its training sources first. If ATRW is included, skip it or report it separately with a warning.
 
 **Expectations:** biggest gain should be new-tiger AUROC (that's what the loss teaches), and rank-1/mAP should rise too. If training doesn't clearly beat SIFT given the wide intervals, that's a legitimate finding, reported honestly.
+
+## 10. What Phase 4 found (Nov 11–16, val only, test still untouched)
+- **Training works.** DINOv2 ViT-B + ArcFace: val rank-1 **81%**, mAP **0.78 ± 0.04** (4 runs). The untrained baselines got ~50% rank-1 on test. Bigger images, extra regularization and longer training didn't help; the bigger backbone did.
+- **Spotting new tigers:** the best "is this new?" score is the **margin** between the two closest known tigers, plus a **SIFT stripe re-check** of the top-10 candidates. Val AUROC went from 0.77 to **0.88**. Details: [05-open-set.md](05-open-set.md).
+- **But AUROC hid a problem.** If the threshold keeps 95% of known tigers recognized, about **half of new tigers get accepted as known**. Those are false yes's, the costly mistake. That holds for unseen zoo tigers and for 269 wild camera-trap tigers from Rajaji (India).
+- **Why:** a few known-tiger photos show a side or view that isn't in the gallery (rear, frontal, behind a fence). Nothing can match stripes that aren't visible, so these look "new" and drag the threshold up. A much better learned matcher (LightGlue) didn't fix it: [06-local-matching.md](06-local-matching.md).
+- **What's left to decide (D26):** pick the threshold by an acceptable false-yes rate (e.g. 5%: about 69% of known tigers recognized automatically, the rest checked by a person). Then run the test set once.
+

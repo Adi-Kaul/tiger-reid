@@ -215,3 +215,18 @@ Format: **Decision**, **Why**, **Alternatives**, **Consequences**.
 - **Data note:** openset_val entity 250 looks like the same tiger as known entity 247 (same scene, pose and moment; 159 SIFT inliers, embedding distance 0.03), so it's probably an ATRW label error. It stays in (1 of 46 unknowns, 18 of 221 in unknown_all): we don't drop data after seeing results; it's reported.
 - **Honesty note:** this is the third look at the same 46 val unknowns (7 tigers). Gains under ~0.02 AUROC are within noise; unknown_all and the wild set are the cross-checks.
 - **Result (Nov 16): D18 choice kept.** Best D25 candidate SIFT w=1 + LightGlue w=0.5: val AUROC 0.890 vs 0.883 (needs ≥ 0.893); unknown_all AUROC 0.911 vs 0.901; false-"known" 57% / 33% at keep-95/90 vs D18 48% / 46%. LightGlue alone: 0.857–0.863. **Why it didn't help more:** LightGlue separates typical known queries far better than SIFT (median 76 vs 22 inliers for unknowns), but the hardest ~10% of known queries (rear, frontal, crouched, behind a fence) get ≤16 inliers, fewer than a typical unknown, with either matcher. Their visible side isn't in the gallery, so no matcher can line up the stripes. Thresholds that keep 95% of knowns are set by those few images. Grid: `results/openset_val_grid_d25.csv`.
+
+## D26. How to pick the open-set threshold (proposed Nov 16, 2026; ⏸ ON HOLD, user to decide)
+- **Status:** not decided. The user asked to hold this decision. Nothing in the code uses it yet, and the test run waits on it.
+- **Problem:** The usual operating point ("keep 95% of known tigers recognized") is set by the few known queries whose visible side isn't in the gallery (D25 result). At that threshold the D18 pipeline accepts ~half of new tigers as known (val 48%, unknown_all and wild similar). A false "known" merges two tigers into one and corrupts population counts; a false "new" only costs a human check.
+- **Proposal:** choose the threshold on val for a **target false-yes rate** (share of `openset_val` unknowns accepted as known); everything above it is "possibly new → human review". Report on test, once: the actual false-yes rate, the share of known tigers recognized automatically, and rank-1 among those.
+- **Options on the table (val, D18 pipeline, seed 0):**
+
+  | false-yes target (val unknowns) | knowns auto-recognized | same threshold on unknown_all |
+  |---|---|---|
+  | 5% | 69% | 9% false yes |
+  | 10% | 79% | 14% false yes |
+  | 20% | 82% | 19% false yes |
+
+  5% is the safer choice, but on 46 unknowns it's set by ~2 images (one is the suspected 250/247 label error). 10% is steadier. Reporting both is also possible.
+- **Alternatives:** keep-95%/keep-90% of knowns (current, gives the ~50% false yes's); report only AUROC and the full ROC curve (threshold-free, but hides the problem); a 3-way rule with two thresholds (known / review / new).
