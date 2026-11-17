@@ -1,7 +1,12 @@
-"""Open-set scoring on saved checkpoints (docs/decisions.md D18).
+"""Open-set scoring on saved checkpoints (docs/decisions.md D18, D26).
 
     python scripts/eval_openset.py --stage val            # all candidates + selection
-    python scripts/eval_openset.py --stage test --final   # chosen pipeline, ONCE, for reporting
+    python scripts/eval_openset.py --stage val --final --dino CKPT    # chosen pipeline + D26 thresholds on val
+    python scripts/eval_openset.py --stage test --final --dino CKPT   # ONCE per seed, for reporting
+
+--final refits everything that depends on the model on THIS checkpoint's val
+sets (z-score params, D26 thresholds at 5% / 10% false yes on val unknowns),
+then applies them unchanged to test. The seed is read from the checkpoint.
 
 Val run: evaluates the pre-declared candidates step by step (S1-S3, then +TTA,
 +ENS, +SIFT; keep a step only if AUROC gains >= 0.01 and val rank-1/mAP don't
@@ -25,7 +30,7 @@ from tiger_reid.metrics import auroc_from_scores, bootstrap_ci, cosine_distance,
 from tiger_reid.openset import (centroid_dist, entity_min_dist, false_known_rate, fuse_scores,
                                 known_accept_rate, known_threshold, margin_score, threshold_for_false_yes,
                                 top_images_per_entity, topk_entities, zscore_params)
-from tiger_reid.results import log_result
+from tiger_reid.results import RESULTS_CSV, log_result
 from tiger_reid.sift_baseline import candidates_from_entities, max_inliers_candidates, sift_features
 from tiger_reid.splits import eval_sets, load_splits
 from tiger_reid.training import load_model
@@ -38,6 +43,7 @@ GRID_D27_CSV = REPO / "results" / "openset_val_grid_d27.csv"
 LG_PER_ENTITY = 5        # D25: nearest gallery images per top-10 entity for LightGlue
 CHOICE_JSON = REPO / "results" / "openset_choice.json"
 SETS = ["gallery", "query", "unknown", "unknown_all"]
+FY_TARGETS = (0.05, 0.10)  # D26: false-yes targets on val unknowns (report both)
 MIN_GAIN = 0.01          # D18
 TOL = 1e-9               # "don't drop" = no decrease at all
 
@@ -310,6 +316,51 @@ def select_extra(ctx: Ctx, choice: dict, cands: list, grid_csv: Path, tag: str, 
     return (spec, m, zp) if adopt else None
 
 
+# ---------- final evaluation (D26) ----------
+
+def ckpt_seed(path: Path) -> int:
+    import torch
+    return int(torch.load(path, map_location="cpu", weights_only=False)["cfg"]["seed"])
+
+
+def operating_points(ctx: Ctx, spec, s: dict, thr: dict) -> dict:
+    """D26 at thresholds fixed on val: false-yes rates, knowns auto-recognized,
+    and rank-1 among the auto-recognized knowns. "review" = everything above the threshold."""
+    dq = ctx.dists(spec)["query"][0]
+    correct = ctx.g_lab[np.argmin(dq, axis=1)] == ctx.q_lab
+    out = {}
+    for name, th in thr.items():
+        auto = np.asarray(s["query"]) <= th
+        out |= {f"fy_{name}": false_known_rate(s["unknown"], th),
+                f"fy_all_{name}": false_known_rate(s["unknown_all"], th),
+                f"known_auto_{name}": float(auto.mean()),
+                f"rank1_auto_{name}": float(correct[auto].mean()) if auto.any() else float("nan"),
+                f"auto_correct_{name}": float((auto & correct).mean())}
+    return out
+
+
+def final(args, ckpts, spec, device) -> tuple[dict, int]:
+    seed = ckpt_seed(ckpts["dino"])
+    val = Ctx("val", ckpts, device)
+    m_val, zp, s_val = scores(val, spec)               # refit on this seed's val
+    thr = {f"fy{int(r * 100)}": threshold_for_false_yes(s_val["unknown"], r) for r in FY_TARGETS}
+    thr["keep95"] = known_threshold(s_val["query"], 0.95)
+    if args.stage == "val":
+        ctx, m, s = val, m_val, s_val
+    else:
+        ctx = Ctx("test", ckpts, device)
+        m, _, s = scores(ctx, spec, zp)
+    m |= operating_points(ctx, spec, s, thr) | {f"thr_{k}": v for k, v in thr.items()}
+    m["n_unknown_all"] = len(s["unknown_all"])
+    print(f"\n{args.stage} seed {seed}: {describe(spec)}")
+    print(f"  rank-1 {m['rank1']:.3f}  mAP {m['mAP']:.3f}  AUROC {m['auroc']:.3f} "
+          f"[{m['auroc_lo']:.2f}-{m['auroc_hi']:.2f}]  all {m['auroc_all']:.3f}")
+    for k in ("fy5", "fy10", "keep95"):
+        print(f"  threshold {k:6s}: false yes {m[f'fy_{k}']:.2f} (unknown_all {m[f'fy_all_{k}']:.2f})  "
+              f"knowns auto {m[f'known_auto_{k}']:.2f}  rank-1 among auto {m[f'rank1_auto_{k}']:.2f}")
+    return m, seed
+
+
 def d24_candidates():
     base = {"tta": True, "ens_w": None}
     c = [("N+S", {**base, "score": "nearest", "near_a": None, "sift_w": w}) for w in (0.25, 0.5, 1.0)]
@@ -350,7 +401,10 @@ def main():
             raise SystemExit(f"missing {p}: download it from Drive tiger-reid-runs/ into checkpoints/")
     if args.stage == "test" and not args.final:
         raise SystemExit("test is for the final pipeline only: use --final")
-    ctx = Ctx(args.stage, ckpts, pick_device())
+    if args.stage == "test" and args.no_log:
+        raise SystemExit("test runs are always logged (one-time, recorded); drop --no-log")
+    device = pick_device()
+    ctx = Ctx(args.stage, ckpts, device) if not args.final else None
 
     tag = "D24" if args.d24 else "D25" if args.d25 else "D27" if args.d27 else None
     if tag:
@@ -375,14 +429,22 @@ def main():
         print(f"\nchosen: {describe(spec)}  val AUROC {m['auroc']:.3f} "
               f"(optimistic: chosen on openset_val)  -> {CHOICE_JSON.name}, {GRID_CSV.name}")
     else:
-        choice = json.loads(CHOICE_JSON.read_text())
-        spec = choice["spec"]
-        m, _, _ = scores(ctx, spec, choice["zscore_params"])
-        print(f"{args.stage}: {describe(spec)}", {k: round(v, 3) if isinstance(v, float) else v
-                                                   for k, v in m.items()})
+        spec = json.loads(CHOICE_JSON.read_text())["spec"]
+        method = f"open-set pipeline: {describe(spec)}"
+        seed = ckpt_seed(ckpts["dino"])
+        if args.stage == "test" and not args.no_log and RESULTS_CSV.exists():
+            done = pd.read_csv(RESULTS_CSV)
+            if ((done.method == method) & (done.eval_split == "test") & (done.seed == seed)).any():
+                raise SystemExit(f"test already run for seed {seed} ({method}); it's a one-time run")
+        m, seed = final(args, ckpts, spec, device)
+        if not args.no_log:
+            log_result(method, args.stage, m, {"spec": spec, "dino": args.dino, "rule": "D18+D26",
+                                               "fy_targets": list(FY_TARGETS)}, seed=seed)
+        return
     if not args.no_log:
         log_result(f"open-set pipeline: {describe(spec)}", args.stage, m,
-                   {"spec": spec, "dino": args.dino, "resnet": args.resnet, "rule": tag or "D18"}, seed=0)
+                   {"spec": spec, "dino": args.dino, "resnet": args.resnet, "rule": tag or "D18"},
+                   seed=ckpt_seed(ckpts["dino"]))
 
 
 if __name__ == "__main__":

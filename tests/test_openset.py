@@ -125,3 +125,23 @@ def test_ransac_inliers_on_exact_homography():
     assert ransac_inliers(src, dst) == 30
     assert 18 <= ransac_inliers(src, dst_bad) <= 21
     assert ransac_inliers(src[:3], dst[:3]) == 0
+
+
+def test_operating_points_on_toy_scores():
+    """D26: thresholds fixed elsewhere; auto = score <= threshold; rank-1 only over auto."""
+    import sys
+    from types import SimpleNamespace
+    sys.path.insert(0, "scripts")
+    from eval_openset import operating_points
+
+    g_lab = np.array([1, 2, 3])
+    q_lab = np.array([1, 2, 3, 1])
+    dq = np.array([[0, 1, 1], [1, 0, 1], [0, 1, 1], [1, 1, 0]], float)   # q2, q3 wrong
+    ctx = SimpleNamespace(g_lab=g_lab, q_lab=q_lab, dists=lambda spec: {"query": (dq, None)})
+    s = {"query": np.array([0.1, 0.2, 0.9, 0.3]), "unknown": np.array([0.25, 0.8, 0.9, 1.0]),
+         "unknown_all": np.array([0.05, 0.8])}
+    m = operating_points(ctx, {}, s, {"t": 0.3})
+    assert m["fy_t"] == 0.25 and m["fy_all_t"] == 0.5
+    assert m["known_auto_t"] == 0.75                     # q0, q1, q3 accepted
+    assert np.isclose(m["rank1_auto_t"], 2 / 3)          # q3 is wrong
+    assert m["auto_correct_t"] == 0.5

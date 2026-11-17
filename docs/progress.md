@@ -62,8 +62,10 @@ python scripts/summarize_results.py                                             
 - Part of SIFT's open-set gain is scene matching. Report caveat: it may shrink in the wild (D27 note).
 - The new helper reproduces the D26 numbers (69% / 79%).
 
+- **D26 decided (user): option C**, report both the 5% and 10% false-yes thresholds. `eval_openset.py --final` now refits z-score params and both thresholds on each seed's val, reads the seed from the checkpoint, refuses a second test run per seed, and refuses unlogged test runs. Val check (seed 0): 5% → 69% of knowns automatic (rank-1 93% among them); 10% → 79% (91%); keep-95 → 94% (84%). 60 tests.
+
 **Next**
-- D26 decision (option C, report both 5% and 10%, recommended), then the multi-seed fixes and the one-time test run.
+- Download dinov2b seeds 1–2, then test once per seed.
 
 ---
 
