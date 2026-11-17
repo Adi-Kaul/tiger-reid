@@ -8,24 +8,24 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 
 **Where we are:** Phase 4, final steps. Base model is **`dinov2b`** (DINOv2 ViT-B/14 + ArcFace, 224 px; D22): 4-run val mAP 0.78 ± 0.04, rank-1 81%. Open-set pipeline chosen on val (D18): **margin score + 5-crop TTA + SIFT re-check of the top-10 entities (w=1)** → val AUROC **0.883** [0.82–0.94], rank-1 82%, mAP 0.82 (seed 0). **Test set still untouched.**
 
-**Open decision (user asked to hold it): D26, how to pick the open-set threshold.** At a threshold that keeps 95% of known tigers recognized, ~half of new tigers are wrongly accepted as known (val 48%, wild 49%). Cause: the hardest ~5–10% of known queries show a view whose side isn't in the gallery (rear, frontal, crouched, behind a fence), so no matcher can line up the stripes (D25 result). Proposal: set the threshold for a **false-yes target** on val and send everything above it to human review. D18 pipeline on val: 5% false yes → 69% of knowns auto-recognized; 10% → 79%. Options: 5%, 10%, or report both. See `docs/learning/05-open-set.md`.
+**D26 decided (Nov 17): report both thresholds.** Thresholds are fit on each seed's val so that 5% and 10% of `openset_val` unknowns would be accepted as known; everything above goes to human review. Val seed 0: 5% → 69% of knowns automatic (rank-1 93% among them), 10% → 79% (91%), vs keep-95 → 94% with 48% false yes.
 
 **What was tried for the false yes's (all on val, all pre-declared, test untouched):**
-- D27 tiger-only SIFT (background masked) → 0.844, worse. New tigers never got background matches; known tigers did (same enclosure). Part of SIFT's gain is scene matching (report caveat).
 - D24 add absolute nearest distance → worse (best 0.864). It only helps on wild images (domain shift).
 - D25 DISK + LightGlue re-check (`src/tiger_reid/local_match.py`) → 0.890, under the +0.01 bar. Much better on typical images, no help on unmatched views.
+- D27 tiger-only SIFT (background masked) → 0.844, worse. New tigers never got background matches; known tigers did (same enclosure). Part of SIFT's gain is scene matching (report caveat).
 - Wild check (`scripts/eval_wild_novelty.py`): all 269 Rajaji images are new tigers by construction; D18 AUROC 0.885 known-vs-wild.
 
 **Next, in order:**
-1. User decides D26 (threshold rule). Then log it in `docs/decisions.md` and implement the threshold in `eval_openset.py --final` (false-yes rate + share of knowns auto-recognized).
-2. Download `dinov2b` seed 1 (17:58 run) and seed 2 checkpoints from the adikaul07 Drive `tiger-reid-runs/` into `checkpoints/`. (`dinov2b_s0.pt` is in place.)
-3. Before the test run, fix in `eval_openset.py`: (a) `log_result` hard-codes seed=0; (b) z-score params (and the D26 threshold) must be refit on val **per seed**, not reused from seed 0.
-4. Test once (D21 C) on seeds 0–2 → mean ± sd → `scripts/summarize_results.py`. That closes Phase 4; check with the user before Phase 5.
+1. Put `dinov2b_s1.pt` (**17:58 run**, folder `dinov2b_s1_20261113-1758`) and `dinov2b_s2.pt` from the adikaul07 Drive `tiger-reid-runs/` into `checkpoints/` (345 MB each; only the umich Drive syncs locally, so download by hand). Check size 344556166 and cfg seed.
+2. Test once per seed (refuses repeats): `python scripts/eval_openset.py --stage test --final --dino checkpoints/dinov2b_s{0,1,2}.pt`.
+3. Extend `scripts/summarize_results.py` with the D26 columns (false yes, knowns auto, rank-1 among auto at fy5/fy10/keep95), then write up. That closes Phase 4; check with the user before Phase 5.
+4. Optional, reported as a separate setting: clip-level queries (several frames per sighting).
 
 **Known data issues:** val unknowns = 46 images of only **7 tigers**; openset_val entity 250 looks like a mislabeled image of known 247 (kept in, D25 note). Wild Rajaji labeling (D23) is **parked**: proposed groups weren't well sorted.
 
-**Mode:** rapid development (`CLAUDE.md`): Claude writes code, explains briefly, runs `pytest -q` (55 tests), commits + pushes each verified step, asks at phase boundaries and on result-shaping choices.
-**Read first:** [`learning/00-project-story.md`](learning/00-project-story.md), [`learning/05-open-set.md`](learning/05-open-set.md), [`decisions.md`](decisions.md) D18–D26.
+**Mode:** rapid development (`CLAUDE.md`): Claude writes code, explains briefly, runs `pytest -q` (60 tests), commits + pushes each verified step, asks at phase boundaries and on result-shaping choices.
+**Read first:** [`learning/00-project-story.md`](learning/00-project-story.md), [`learning/05-open-set.md`](learning/05-open-set.md), [`decisions.md`](decisions.md) D18–D27.
 
 **Useful commands:**
 ```bash
@@ -33,7 +33,8 @@ source .venv/bin/activate && pytest -q
 python scripts/eval_openset.py --stage val --dino checkpoints/dinov2b_s0.pt          # D18 selection (~10 min)
 python scripts/eval_openset.py --stage val --d25 --dino checkpoints/dinov2b_s0.pt    # LightGlue candidates (~30 min)
 python scripts/eval_wild_novelty.py --dino checkpoints/dinov2b_s0.pt                 # wild all-new check
-python scripts/eval_openset.py --stage test --final --dino ...                       # ONCE, after D26
+python scripts/eval_openset.py --stage val --final --dino checkpoints/dinov2b_s0.pt  # D26 thresholds on val
+python scripts/eval_openset.py --stage test --final --dino checkpoints/dinov2b_sN.pt # ONCE per seed
 python scripts/summarize_results.py                                                  # -> results/summary.md
 ```
 
