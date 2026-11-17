@@ -23,8 +23,8 @@ from tiger_reid.data import REPO
 from tiger_reid.dataset import eval_transform, extract_embeddings, extract_embeddings_tta, pick_device
 from tiger_reid.metrics import auroc_from_scores, bootstrap_ci, cosine_distance, mean_ap, rank_k
 from tiger_reid.openset import (centroid_dist, entity_min_dist, false_known_rate, fuse_scores,
-                                known_threshold, margin_score, top_images_per_entity, topk_entities,
-                                zscore_params)
+                                known_accept_rate, known_threshold, margin_score, threshold_for_false_yes,
+                                top_images_per_entity, topk_entities, zscore_params)
 from tiger_reid.results import log_result
 from tiger_reid.sift_baseline import candidates_from_entities, max_inliers_candidates, sift_features
 from tiger_reid.splits import eval_sets, load_splits
@@ -34,6 +34,7 @@ EMB_DIR = REPO / "checkpoints" / "emb"
 GRID_CSV = REPO / "results" / "openset_val_grid.csv"
 GRID_D24_CSV = REPO / "results" / "openset_val_grid_d24.csv"
 GRID_D25_CSV = REPO / "results" / "openset_val_grid_d25.csv"
+GRID_D27_CSV = REPO / "results" / "openset_val_grid_d27.csv"
 LG_PER_ENTITY = 5        # D25: nearest gallery images per top-10 entity for LightGlue
 CHOICE_JSON = REPO / "results" / "openset_choice.json"
 SETS = ["gallery", "query", "unknown", "unknown_all"]
@@ -74,14 +75,16 @@ def extra_embeddings(ckpt: Path, name: str, df, tta: bool, device) -> np.ndarray
     return e
 
 
-def sift_feats(paths) -> list:
-    cache = EMB_DIR / "sift_feats.pkl"
+def sift_feats(paths, masker=None) -> list:
+    """SIFT features per image; with a masker (D27), keypoints only on the tiger."""
+    cache = EMB_DIR / ("sift_feats_masked.pkl" if masker else "sift_feats.pkl")
     store = pickle.load(open(cache, "rb")) if cache.exists() else {}
     missing = [p for p in map(str, paths) if p not in store]
     if missing:
-        print(f"  SIFT features for {len(missing)} images", flush=True)
-        for p in missing:
-            store[p] = sift_features(p)
+        print(f"  SIFT features for {len(missing)} images{' (tiger-only)' if masker else ''}", flush=True)
+        masks = masker.masks(missing) if masker else [None] * len(missing)
+        for p, mk in zip(missing, masks):
+            store[p] = sift_features(p, mask=mk)
         pickle.dump(store, open(cache, "wb"))
     return [store[str(p)] for p in paths]
 
@@ -100,6 +103,15 @@ class Ctx:
         self._emb, self._inl, self._lg = {}, {}, {}
         self.score_sets = list(SETS[1:])     # sets that get novelty scores
         self._matcher = None
+        self._masker = None
+
+    def masker(self):
+        """D27 foreground masker; PCA fit on train-split images only."""
+        if self._masker is None:
+            from tiger_reid.fg_mask import FgMasker
+            sp = load_splits()
+            self._masker = FgMasker(sp.loc[sp.split == "train", "path"].values, self.device)
+        return self._masker
 
     def add_set(self, name: str, df):
         """Extra query set scored against the same gallery (e.g. wild images). No labels used."""
@@ -132,11 +144,13 @@ class Ctx:
         return out
 
     def inliers(self, spec, k, top_ents) -> np.ndarray:
-        key = (spec["tta"], spec["ens_w"], k)
+        mk = bool(spec.get("sift_mask"))
+        key = (spec["tta"], spec["ens_w"], k, mk)
         if key not in self._inl:
-            print(f"  SIFT top-10 re-check: {k} ({len(top_ents)} queries)", flush=True)
-            q = sift_feats(self.sets[k].path.values)
-            g = sift_feats(self.sets["gallery"].path.values)
+            print(f"  SIFT{' (tiger-only)' if mk else ''} top-10 re-check: {k} ({len(top_ents)} queries)", flush=True)
+            masker = self.masker() if mk else None
+            q = sift_feats(self.sets[k].path.values, masker)
+            g = sift_feats(self.sets["gallery"].path.values, masker)
             cand = candidates_from_entities(top_ents, self.g_lab)
             self._inl[key] = max_inliers_candidates(q, g, cand)
         return self._inl[key]
@@ -204,7 +218,7 @@ def describe(spec) -> str:
     if spec["ens_w"] is not None:
         parts.append(f"ENS w={spec['ens_w']}")
     if spec["sift_w"] is not None:
-        parts.append(f"SIFT w={spec['sift_w']}")
+        parts.append(f"SIFT{' tiger-only' if spec.get('sift_mask') else ''} w={spec['sift_w']}")
     return " + ".join(parts)
 
 
@@ -251,13 +265,20 @@ def select(ctx: Ctx):
 
 
 def false_known(s) -> dict:
-    """False-"known" rate on unknowns at thresholds keeping 95% / 90% of known queries."""
-    return {f"false_known@keep{int(q * 100)}": round(false_known_rate(s["unknown"], known_threshold(s["query"], q)), 4)
-            for q in (0.95, 0.90)}
+    """False-"known" rate on unknowns at thresholds keeping 95% / 90% of known queries,
+    and (D26) the share of knowns auto-recognized at 5% / 10% false yes on val unknowns."""
+    out = {f"false_known@keep{int(q * 100)}": round(false_known_rate(s["unknown"], known_threshold(s["query"], q)), 4)
+           for q in (0.95, 0.90)}
+    for r in (0.05, 0.10):
+        thr = threshold_for_false_yes(s["unknown"], r)
+        out[f"known_auto@fy{int(r * 100)}"] = round(known_accept_rate(s["query"], thr), 4)
+        out[f"fy_all@fy{int(r * 100)}"] = round(false_known_rate(s["unknown_all"], thr), 4)
+    return out
 
 
-def select_extra(ctx: Ctx, choice: dict, cands: list, grid_csv: Path, tag: str):
-    """D24/D25: pre-declared extra candidates; replace the current choice only if AUROC +0.01."""
+def select_extra(ctx: Ctx, choice: dict, cands: list, grid_csv: Path, tag: str, controls=()):
+    """D24/D25/D27: pre-declared extra candidates; replace the current choice only if AUROC +0.01.
+    `controls` are reported but can't be chosen (D27: unmasked SIFT at the new weight)."""
     cur = choice["spec"]
     rows = []
 
@@ -271,15 +292,18 @@ def select_extra(ctx: Ctx, choice: dict, cands: list, grid_csv: Path, tag: str):
                      "rank1": round(m["rank1"], 4), "mAP": round(m["mAP"], 4)})
         print(f"  {name:6s} {describe(spec):40s} AUROC {m['auroc']:.3f} [{m['auroc_lo']:.2f}-{m['auroc_hi']:.2f}]"
               f"  all {m['auroc_all']:.3f}  false-known 95/90: {fk['false_known@keep95']:.2f}"
-              f" / {fk['false_known@keep90']:.2f}", flush=True)
+              f" / {fk['false_known@keep90']:.2f}  auto@fy5/10: {fk['known_auto@fy5']:.2f} / {fk['known_auto@fy10']:.2f}",
+              flush=True)
         return m, zp
 
     m_cur, _ = run("current", cur)
+    for name, spec in controls:
+        run(name, spec)
     tried = [(spec, run(name, spec)) for name, spec in cands]
     spec, (m, zp) = max(tried, key=lambda t: t[1][0]["auroc"])
     adopt = m["auroc"] >= m_cur["auroc"] + MIN_GAIN - TOL
     df = pd.DataFrame(rows)
-    df["chosen"] = df.pipeline == describe(spec if adopt else cur)
+    df["chosen"] = (df.pipeline == describe(spec if adopt else cur)) & ~df.candidate.isin([n for n, _ in controls])
     df.to_csv(grid_csv, index=False)
     print(f"\nbest {tag} candidate: {describe(spec)} AUROC {m['auroc']:.3f} vs current {m_cur['auroc']:.3f} -> "
           + ("ADOPT" if adopt else "keep current (needs +0.01)"))
@@ -299,6 +323,15 @@ def d25_candidates():
     return c + [("S+LG", {**base, "sift_w": 1.0, "lg_w": w}) for w in (0.5, 1.0)]
 
 
+def d27_candidates():
+    base = {"score": "margin", "tta": True, "ens_w": None, "near_a": None}
+    return [("MS", {**base, "sift_w": w, "sift_mask": True}) for w in (0.5, 1.0, 2.0)]
+
+
+def d27_controls():
+    return [("ctrl", {"score": "margin", "tta": True, "ens_w": None, "near_a": None, "sift_w": 2.0})]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--stage", choices=["val", "test"], default="val")
@@ -308,6 +341,7 @@ def main():
     ap.add_argument("--no-log", action="store_true")
     ap.add_argument("--d24", action="store_true", help="D24 extra candidates on val vs the saved choice")
     ap.add_argument("--d25", action="store_true", help="D25 LightGlue candidates on val vs the saved choice")
+    ap.add_argument("--d27", action="store_true", help="D27 tiger-only SIFT candidates on val vs the saved choice")
     args = ap.parse_args()
 
     ckpts = {"dino": REPO / args.dino, "resnet": REPO / args.resnet}
@@ -318,13 +352,15 @@ def main():
         raise SystemExit("test is for the final pipeline only: use --final")
     ctx = Ctx(args.stage, ckpts, pick_device())
 
-    if args.d24 or args.d25:
+    tag = "D24" if args.d24 else "D25" if args.d25 else "D27" if args.d27 else None
+    if tag:
         if args.stage != "val":
-            raise SystemExit("--d24/--d25 are val-only selection steps")
+            raise SystemExit("--d24/--d25/--d27 are val-only selection steps")
         choice = json.loads(CHOICE_JSON.read_text())
-        tag = "D24" if args.d24 else "D25"
-        res = select_extra(ctx, choice, d24_candidates() if args.d24 else d25_candidates(),
-                           GRID_D24_CSV if args.d24 else GRID_D25_CSV, tag)
+        cands, grid, ctrl = {"D24": (d24_candidates(), GRID_D24_CSV, ()),
+                             "D25": (d25_candidates(), GRID_D25_CSV, ()),
+                             "D27": (d27_candidates(), GRID_D27_CSV, d27_controls())}[tag]
+        res = select_extra(ctx, choice, cands, grid, tag, ctrl)
         if res is None:
             return
         spec, m, zp = res
@@ -346,7 +382,7 @@ def main():
                                                    for k, v in m.items()})
     if not args.no_log:
         log_result(f"open-set pipeline: {describe(spec)}", args.stage, m,
-                   {"spec": spec, "dino": args.dino, "resnet": args.resnet, "rule": "D25" if args.d25 else "D24" if args.d24 else "D18"}, seed=0)
+                   {"spec": spec, "dino": args.dino, "resnet": args.resnet, "rule": tag or "D18"}, seed=0)
 
 
 if __name__ == "__main__":

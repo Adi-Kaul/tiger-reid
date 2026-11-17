@@ -79,6 +79,17 @@ def false_known_rate(s_new, threshold: float) -> float:
     return float(np.mean(np.asarray(s_new, dtype=np.float64) <= threshold))
 
 
+def threshold_for_false_yes(s_new, rate: float) -> float:
+    """D26: score threshold at which about `rate` of the new tigers are accepted as known
+    (score <= threshold). Fixed on val unknowns."""
+    return float(np.quantile(np.asarray(s_new, dtype=np.float64), rate))
+
+
+def known_accept_rate(s_known, threshold: float) -> float:
+    """Share of known queries recognized automatically (score <= threshold)."""
+    return float(np.mean(np.asarray(s_known, dtype=np.float64) <= threshold))
+
+
 def fuse_scores(base, spec: dict, zp: dict, nearest=None, log_inl=None, log_lg=None) -> np.ndarray:
     """Final novelty score (D18/D24) from its parts.
 

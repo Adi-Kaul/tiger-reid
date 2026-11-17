@@ -4,13 +4,14 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 
 ---
 
-## START HERE (handoff for the next session, updated Nov 16)
+## START HERE (handoff for the next session, updated Nov 17)
 
 **Where we are:** Phase 4, final steps. Base model is **`dinov2b`** (DINOv2 ViT-B/14 + ArcFace, 224 px; D22): 4-run val mAP 0.78 ± 0.04, rank-1 81%. Open-set pipeline chosen on val (D18): **margin score + 5-crop TTA + SIFT re-check of the top-10 entities (w=1)** → val AUROC **0.883** [0.82–0.94], rank-1 82%, mAP 0.82 (seed 0). **Test set still untouched.**
 
 **Open decision (user asked to hold it): D26, how to pick the open-set threshold.** At a threshold that keeps 95% of known tigers recognized, ~half of new tigers are wrongly accepted as known (val 48%, wild 49%). Cause: the hardest ~5–10% of known queries show a view whose side isn't in the gallery (rear, frontal, crouched, behind a fence), so no matcher can line up the stripes (D25 result). Proposal: set the threshold for a **false-yes target** on val and send everything above it to human review. D18 pipeline on val: 5% false yes → 69% of knowns auto-recognized; 10% → 79%. Options: 5%, 10%, or report both. See `docs/learning/05-open-set.md`.
 
 **What was tried for the false yes's (all on val, all pre-declared, test untouched):**
+- D27 tiger-only SIFT (background masked) → 0.844, worse. New tigers never got background matches; known tigers did (same enclosure). Part of SIFT's gain is scene matching (report caveat).
 - D24 add absolute nearest distance → worse (best 0.864). It only helps on wild images (domain shift).
 - D25 DISK + LightGlue re-check (`src/tiger_reid/local_match.py`) → 0.890, under the +0.01 bar. Much better on typical images, no help on unmatched views.
 - Wild check (`scripts/eval_wild_novelty.py`): all 269 Rajaji images are new tigers by construction; D18 AUROC 0.885 known-vs-wild.
@@ -38,6 +39,31 @@ python scripts/summarize_results.py                                             
 
 **Accounts / compute:** use adikaul07@gmail.com for everything (Drive, Colab, Gmail, git). Training on Colab T4; local `mps` for eval. Weights: adikaul07 Drive `MyDrive/tiger-reid-runs/` (older runs in the umich Drive).
 **Wild data contacts (Nov 12–14):** Harihar (Panthera) pointed to GBIF only; full set needs WII permission. GBIF Rajaji: 269/305 images cached, no individual IDs. Records carry fine coordinates: never commit them.
+
+---
+
+## Nov 17, 2026 (Tue): tiger-only SIFT (D27)
+
+**Done**
+- D27 pre-declared, then run on val: SIFT re-check restricted to the tiger with label-free DINOv2-S patch-PCA masks (`src/tiger_reid/fg_mask.py`; `sift_features(..., mask=)`; `eval_openset.py --d27`).
+- `eval_openset.py` extra-candidate grids now also report the D26 operating points: knowns auto-recognized at 5% / 10% false yes (`known_auto@fy5/10`) and the same threshold's false-yes rate on unknown_all. New helpers `threshold_for_false_yes`, `known_accept_rate` in `openset.py`. 59 tests.
+
+**Findings**
+
+| pipeline (val, dinov2b s0) | AUROC [CI] | AUROC all | false known @keep95 | known auto @5% / 10% false yes |
+|---|---|---|---|---|
+| **D18: margin + TTA + SIFT w=1 (kept)** | **0.883 [0.82–0.94]** | **0.901** | 48% | **69% / 79%** |
+| control: unmasked SIFT w=2 | 0.886 | 0.895 | 52% | 69% / 79% |
+| tiger-only SIFT w=0.5 | 0.839 | 0.858 | 70% | 60% / 60% |
+| tiger-only SIFT w=1 | 0.844 | 0.844 | 67% | 64% / 69% |
+| tiger-only SIFT w=2 | 0.834 | 0.810 | 70% | 55% / 72% |
+
+- Masking hurts. Median inliers: knowns 16 → 9, unknowns 6 → 5. New tigers were not getting background matches; known tigers were matching their own gallery shots from the same enclosure. The "same-zoo background" explanation for false yes's (D25) is wrong.
+- Part of SIFT's open-set gain is scene matching. Report caveat: it may shrink in the wild (D27 note).
+- The new helper reproduces the D26 numbers (69% / 79%).
+
+**Next**
+- D26 decision (option C, report both 5% and 10%, recommended), then the multi-seed fixes and the one-time test run.
 
 ---
 

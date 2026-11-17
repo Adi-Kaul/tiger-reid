@@ -1,0 +1,6 @@
+candidate,pipeline,spec,auroc_unknown_all,auroc,auroc_lo,auroc_hi,auroc_all,false_known@keep95,false_known@keep90,known_auto@fy5,fy_all@fy5,known_auto@fy10,fy_all@fy10,rank1,mAP,chosen
+current,margin + TTA + SIFT w=1.0,"{""score"": ""margin"", ""tta"": true, ""ens_w"": null, ""sift_w"": 1.0}",0.9008,0.8829,0.818,0.94,0.9008,0.4783,0.4565,0.6866,0.086,0.791,0.1403,0.8209,0.82,True
+ctrl,margin + TTA + SIFT w=2.0,"{""score"": ""margin"", ""tta"": true, ""ens_w"": null, ""near_a"": null, ""sift_w"": 2.0}",0.8954,0.8858,0.821,0.943,0.8954,0.5217,0.4783,0.6866,0.0905,0.791,0.1584,0.8209,0.82,False
+MS,margin + TTA + SIFT tiger-only w=0.5,"{""score"": ""margin"", ""tta"": true, ""ens_w"": null, ""near_a"": null, ""sift_w"": 0.5, ""sift_mask"": true}",0.858,0.8387,0.762,0.907,0.858,0.6957,0.5,0.597,0.086,0.597,0.1041,0.8209,0.82,False
+MS,margin + TTA + SIFT tiger-only w=1.0,"{""score"": ""margin"", ""tta"": true, ""ens_w"": null, ""near_a"": null, ""sift_w"": 1.0, ""sift_mask"": true}",0.8435,0.8436,0.766,0.912,0.8435,0.6739,0.5217,0.6418,0.1267,0.6866,0.1538,0.8209,0.82,False
+MS,margin + TTA + SIFT tiger-only w=2.0,"{""score"": ""margin"", ""tta"": true, ""ens_w"": null, ""near_a"": null, ""sift_w"": 2.0, ""sift_mask"": true}",0.8098,0.8335,0.751,0.902,0.8098,0.6957,0.5,0.5522,0.1176,0.7164,0.2036,0.8209,0.82,False

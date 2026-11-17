@@ -13,13 +13,20 @@ import numpy as np
 _GALLERY = None   # set in worker processes
 
 
-def sift_features(path, max_side: int = 400, nfeatures: int = 500):
-    """(keypoint xy (K, 2) float32, descriptors (K, 128) float32) for one image."""
+def sift_features(path, max_side: int = 400, nfeatures: int = 500, mask=None):
+    """(keypoint xy (K, 2) float32, descriptors (K, 128) float32) for one image.
+
+    mask: optional bool grid (any size, True = tiger); keypoints are detected only
+    inside it (D27), so all `nfeatures` land on the animal."""
     img = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
     scale = max_side / max(img.shape)
     if scale < 1:
         img = cv2.resize(img, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
-    kps, desc = cv2.SIFT_create(nfeatures=nfeatures).detectAndCompute(img, None)
+    m = None
+    if mask is not None:
+        from tiger_reid.fg_mask import resize_mask
+        m = resize_mask(np.asarray(mask, bool), img.shape[:2])
+    kps, desc = cv2.SIFT_create(nfeatures=nfeatures).detectAndCompute(img, m)
     if desc is None:
         return np.zeros((0, 2), np.float32), np.zeros((0, 128), np.float32)
     return np.float32([k.pt for k in kps]), desc.astype(np.float32)

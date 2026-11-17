@@ -17,7 +17,7 @@ Rapid-development mode (since Nov 10, 2026): no due dates, aim for results fast,
 - **License CC BY-NC-SA 4.0.** Cite Li et al. 2019 (arXiv:1906.05586).
 - **Compute: full training runs go on Colab** (`notebooks/colab_train.ipynb`, T4 GPU, results → Google Drive `tiger-reid-runs/`), see D14. The 8 GB M2 is too slow (~70 s/epoch) and the first full run died at epoch 3. Local `mps` is fine for tests, smoke runs and evaluation.
 - **Val open-set is tiny too: 46 matched unknown images of only 7 tigers.** One of them (entity 250) looks like a mislabeled image of known 247. Kept in, reported (D25).
-- **AUROC hides the false yes's.** At a threshold keeping 95% of knowns recognized, ~half of new tigers are accepted as known. The cause is known queries whose visible side isn't in the gallery (rear, frontal, fence), not the matcher (D25). The threshold rule is an open user decision (D26).
+- **AUROC hides the false yes's.** At a threshold keeping 95% of knowns recognized, ~half of new tigers are accepted as known. The cause is known queries whose visible side isn't in the gallery (rear, frontal, fence), not the matcher (D25). Not background either: masking it out hurts (D27), and part of SIFT's gain is scene matching. The threshold rule is an open user decision (D26).
 - **Wild data (Rajaji, GBIF): 269 images, no individual IDs.** Used only as an "all new tigers" check against the zoo gallery (`scripts/eval_wild_novelty.py`), never to choose anything. Hand labeling (D23) is parked. Fine coordinates in the records: never commit.
 - Local matching uses `kornia` (DISK + LightGlue), pinned in `requirements.txt`.
 
@@ -62,6 +62,7 @@ Rapid-development mode (since Nov 10, 2026): no due dates, aim for results fast,
 - [x] Stage A open-set scoring on `dinov2b_s0.pt` (D18): margin + TTA + SIFT top-10 re-check, val AUROC 0.883 (from 0.772)
 - [x] Wild novelty check (all 269 Rajaji images are new): AUROC 0.885, but ~half accepted as known at keep-95%
 - [x] D24 nearest-distance candidates: none better (0.864). D25 DISK + LightGlue re-check: 0.890, under the +0.01 bar
+- [x] D27 tiger-only (background-masked) SIFT: worse (0.844). Background matches were helping known tigers, not new ones
 - [x] Error analysis: keep-95% false yes's come from unmatched views of known tigers, plus same-zoo look-alikes
 - [ ] (on hold) D26 threshold rule (false-yes target + human review), waiting on the user
 - [ ] Fix `eval_openset.py --final` for multi-seed: per-seed val z-score params + threshold, log the real seed
