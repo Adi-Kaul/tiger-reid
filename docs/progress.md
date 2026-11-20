@@ -4,44 +4,69 @@ One entry per working day, newest first. Each entry: what got done, findings, pr
 
 ---
 
-## START HERE (handoff for the next session, updated Nov 17)
+## START HERE (handoff for the next session, updated Nov 20)
 
-**Where we are:** Phase 4, final steps. Base model is **`dinov2b`** (DINOv2 ViT-B/14 + ArcFace, 224 px; D22): 4-run val mAP 0.78 ± 0.04, rank-1 81%. Open-set pipeline chosen on val (D18): **margin score + 5-crop TTA + SIFT re-check of the top-10 entities (w=1)** → val AUROC **0.883** [0.82–0.94], rank-1 82%, mAP 0.82 (seed 0). **Test set still untouched.**
+**Where we are:** Phase 4, test run done (Nov 20). Base model **`dinov2b`** (D22) + open-set pipeline chosen on val (D18: margin + 5-crop TTA + SIFT top-10 re-check, w=1), thresholds per D26. **Test is now used: one run per seed, no more.**
 
-**D26 decided (Nov 17): report both thresholds.** Thresholds are fit on each seed's val so that 5% and 10% of `openset_val` unknowns would be accepted as known; everything above goes to human review. Val seed 0: 5% → 69% of knowns automatic (rank-1 93% among them), 10% → 79% (91%), vs keep-95 → 94% with 48% false yes.
+**Test result (3 seeds, `results/summary.md`):** far below val.
 
-**What was tried for the false yes's (all on val, all pre-declared, test untouched):**
-- D24 add absolute nearest distance → worse (best 0.864). It only helps on wild images (domain shift).
-- D25 DISK + LightGlue re-check (`src/tiger_reid/local_match.py`) → 0.890, under the +0.01 bar. Much better on typical images, no help on unmatched views.
-- D27 tiger-only SIFT (background masked) → 0.844, worse. New tigers never got background matches; known tigers did (same enclosure). Part of SIFT's gain is scene matching (report caveat).
-- Wild check (`scripts/eval_wild_novelty.py`): all 269 Rajaji images are new tigers by construction; D18 AUROC 0.885 known-vs-wild.
+| | val (seed 0) | test (3 seeds) |
+|---|---|---|
+| rank-1 | 82% | 60 ± 4% |
+| mAP | 0.82 | 0.61 ± 0.01 |
+| AUROC (19 matched unknowns) | 0.883 | 0.50 ± 0.02 [0.37–0.59] |
+| AUROC (all 129 unknowns) | 0.901 | 0.58 ± 0.02 |
+| false yes @ 5% val threshold | 5% | 74 ± 5% (knowns auto 54%, rank-1 among them 87%) |
 
-**Next, in order:**
-1. Put `dinov2b_s1.pt` (**17:58 run**, folder `dinov2b_s1_20261113-1758`) and `dinov2b_s2.pt` from the adikaul07 Drive `tiger-reid-runs/` into `checkpoints/` (345 MB each; only the umich Drive syncs locally, so download by hand). Check size 344556166 and cfg seed.
-2. Test once per seed (refuses repeats): `python scripts/eval_openset.py --stage test --final --dino checkpoints/dinov2b_s{0,1,2}.pt`.
-3. Extend `scripts/summarize_results.py` with the D26 columns (false yes, knowns auto, rank-1 among auto at fy5/fy10/keep95), then write up. That closes Phase 4; check with the user before Phase 5.
-4. Optional, reported as a separate setting: clip-level queries (several frames per sighting).
+Closed-set still beats every baseline (SIFT 54%, pretrained DINOv2 51%), but open-set is at chance and **below SIFT + RANSAC alone (0.64)** and pretrained ResNet50 (0.63). Seeds agree, so this is not seed noise.
 
-**Known data issues:** val unknowns = 46 images of only **7 tigers**; openset_val entity 250 looks like a mislabeled image of known 247 (kept in, D25 note). Wild Rajaji labeling (D23) is **parked**: proposed groups weren't well sorted.
+**Next (needs the user's call):**
+1. Diagnose the val→test gap **without changing reported numbers** (post-hoc, labeled as such): compare val vs test entities/clips/image types, per-entity errors, whether the test unknowns resemble specific knowns, how small val (46 imgs / 7 tigers) let D18–D27 overfit.
+2. Write up Phase 4 honestly with the test table as is. Then check with the user before Phase 5.
+3. Optional: clip-level queries as a separate setting.
 
-**Mode:** rapid development (`CLAUDE.md`): Claude writes code, explains briefly, runs `pytest -q` (60 tests), commits + pushes each verified step, asks at phase boundaries and on result-shaping choices.
+**Known data issues:** val unknowns = 46 images of only **7 tigers**; test unknowns = 19 images of 6 tigers. openset_val entity 250 looks like a mislabeled image of known 247 (kept in, D25 note). Wild Rajaji labeling (D23) is **parked**.
+
+**Mode:** rapid development (`CLAUDE.md`): Claude writes code, explains briefly, runs `pytest -q` (61 tests), commits + pushes each verified step, asks at phase boundaries and on result-shaping choices.
 **Read first:** [`learning/00-project-story.md`](learning/00-project-story.md), [`learning/05-open-set.md`](learning/05-open-set.md), [`decisions.md`](decisions.md) D18–D27.
 
 **Useful commands:**
 ```bash
 source .venv/bin/activate && pytest -q
 python scripts/eval_openset.py --stage val --dino checkpoints/dinov2b_s0.pt          # D18 selection (~10 min)
-python scripts/eval_openset.py --stage val --d25 --dino checkpoints/dinov2b_s0.pt    # LightGlue candidates (~30 min)
 python scripts/eval_wild_novelty.py --dino checkpoints/dinov2b_s0.pt                 # wild all-new check
 python scripts/eval_openset.py --stage val --final --dino checkpoints/dinov2b_s0.pt  # D26 thresholds on val
-python scripts/eval_openset.py --stage test --final --dino checkpoints/dinov2b_sN.pt # ONCE per seed
 python scripts/summarize_results.py                                                  # -> results/summary.md
 ```
+Checkpoints `dinov2b_s{0,1,2}.pt` are all in `checkpoints/` (seed 1 = 17:58 run, epoch 7, verified).
 
-**Accounts / compute:** use adikaul07@gmail.com for everything (Drive, Colab, Gmail, git). Training on Colab T4; local `mps` for eval. Weights: adikaul07 Drive `MyDrive/tiger-reid-runs/` (older runs in the umich Drive).
+**Accounts / compute:** use adikaul07@gmail.com for everything (Drive, Colab, Gmail, git). Training on Colab T4; local `mps` for eval. Weights: adikaul07 Drive `MyDrive/tiger-reid-runs/`.
 **Wild data contacts (Nov 12–14):** Harihar (Panthera) pointed to GBIF only; full set needs WII permission. GBIF Rajaji: 269/305 images cached, no individual IDs. Records carry fine coordinates: never commit them.
 
 ---
+
+## Nov 20, 2026 (Fri): the test run
+
+**Done**
+- Downloaded `dinov2b_s1.pt` (17:58 run; checkpoint epoch 7 = that run's best epoch, the 18:37 rerun's was 13) and `dinov2b_s2.pt`. Sizes and stored seeds checked.
+- `eval_openset.py --stage test --final` once per seed (0, 1, 2); `summarize_results.py` → `results/summary.md`.
+
+**Findings**
+
+| test, 3 seeds | rank-1 | mAP | AUROC [CI] | AUROC all | false yes @fy5 / fy10 / keep95 | knowns auto @fy5 (rank-1 among) |
+|---|---|---|---|---|---|---|
+| seed 0 | 62% | 0.614 | 0.488 [0.37–0.59] | 0.592 | 74 / 84 / 89% | 53% (88%) |
+| seed 1 | 64% | 0.617 | 0.520 [0.41–0.63] | 0.592 | 79 / 79 / 89% | 57% (83%) |
+| seed 2 | 56% | 0.595 | 0.481 [0.37–0.58] | 0.560 | 68 / 84 / 95% | 51% (91%) |
+| **mean ± sd** | **60 ± 4%** | **0.61 ± 0.01** | **0.50 ± 0.02** | **0.58 ± 0.02** | 74 / 83 / 91% | 54% (87%) |
+
+- Large val→test drop on both halves: closed-set rank-1 82% → 60%, open-set AUROC 0.88 → 0.50 (chance).
+- Val thresholds do not transfer: the "5% false yes" threshold lets 74% of new test tigers through.
+- Closed-set still beats every baseline (SIFT 54%, pretrained DINOv2 51%, ResNet50 43%). Open-set is below SIFT + RANSAC alone (0.64) and pretrained ResNet50 (0.63).
+- All three seeds agree, so this is not seed noise. Likely cause: every open-set choice (D18–D27) was made on 46 val images of 7 tigers. To confirm post-hoc.
+
+**Next**
+- Ask the user: diagnose the gap (post-hoc, numbers stay as reported) and/or write up Phase 4.
 
 ## Nov 17, 2026 (Tue): tiger-only SIFT (D27)
 

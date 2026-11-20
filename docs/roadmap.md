@@ -66,7 +66,7 @@ Rapid-development mode (since Nov 10, 2026): no due dates, aim for results fast,
 - [x] Error analysis: keep-95% false yes's come from unmatched views of known tigers, plus same-zoo look-alikes
 - [x] D26 threshold rule: false-yes targets 5% and 10% on val unknowns, both reported (user, Nov 17)
 - [x] Fix `eval_openset.py --final` for multi-seed: per-seed val z-score params + thresholds, real seed, one test run per seed
-- [ ] Download `dinov2b` seeds 1–2 → test once on seeds 0–2 (D21 C)
+- [x] Download `dinov2b` seeds 1–2 → test once on seeds 0–2 (D21 C). **Test is far below val:** rank-1 60 ± 4% (val 82%), mAP 0.61, AUROC 0.50 ± 0.02 (val 0.883), false yes 74% at the 5% val threshold. Fine-tuned pipeline beats baselines on closed-set but not on open-set (SIFT alone 0.64)
 - [ ] (optional) ResNet50 triplet; MegaDescriptor (check ATRW contamination first)
 - **Improvements under active consideration** (try after the first full runs, chosen on val):
   - **DINOv2 fine-tuned:** best untrained mAP (test 0.375); likely the strongest backbone.
