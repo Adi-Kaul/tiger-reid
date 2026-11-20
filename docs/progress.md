@@ -68,6 +68,8 @@ Checkpoints `dinov2b_s{0,1,2}.pt` are all in `checkpoints/` (seed 1 = 17:58 run,
 **Next**
 - Ask the user: diagnose the gap (post-hoc, numbers stay as reported) and/or write up Phase 4.
 
+---
+
 ## Nov 17, 2026 (Tue): tiger-only SIFT (D27)
 
 **Done**
