@@ -24,7 +24,7 @@ Closed-set still beats every baseline (SIFT 54%, pretrained DINOv2 51%), but ope
 1. Diagnose the val→test gap **without changing reported numbers** (post-hoc, labeled as such): compare val vs test entities/clips/image types, per-entity errors, whether the test unknowns resemble specific knowns, how small val (46 imgs / 7 tigers) let D18–D27 overfit.
 2. Write up Phase 4 honestly with the test table as is. Then check with the user before Phase 5.
 3. Optional: clip-level queries as a separate setting.
-4. Going public (Nov 20): README now leads with the test result, MIT LICENSE added, personal account details and private correspondence trimmed from docs. Flip to public only after the user confirms.
+4. **Public since Nov 21** (https://github.com/Adi-Kaul/tiger-reid): README now leads with the test result, MIT LICENSE added, personal account details and private correspondence trimmed from docs. Commit author email is still visible in history (accepted). The Colab notebook's GitHub-token step is no longer needed.
 
 **Known data issues:** val unknowns = 46 images of only **7 tigers**; test unknowns = 19 images of 6 tigers. openset_val entity 250 looks like a mislabeled image of known 247 (kept in, D25 note). Wild Rajaji labeling (D23) is **parked**.
 
