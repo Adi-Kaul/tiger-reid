@@ -89,10 +89,25 @@ The photos are **video frames**. Two frames a split second apart are near-identi
 
 **Expectations:** biggest gain should be new-tiger AUROC (that's what the loss teaches), and rank-1/mAP should rise too. If training doesn't clearly beat SIFT given the wide intervals, that's a legitimate finding, reported honestly.
 
-## 10. What Phase 4 found (Nov 11–16, val only, test still untouched)
+## 10. What Phase 4 found on val (Nov 11–16, before the test run)
 - **Training works.** DINOv2 ViT-B + ArcFace: val rank-1 **81%**, mAP **0.78 ± 0.04** (4 runs). The untrained baselines got ~50% rank-1 on test. Bigger images, extra regularization and longer training didn't help; the bigger backbone did.
 - **Spotting new tigers:** the best "is this new?" score is the **margin** between the two closest known tigers, plus a **SIFT stripe re-check** of the top-10 candidates. Val AUROC went from 0.77 to **0.88**. Details: [05-open-set.md](05-open-set.md).
 - **But AUROC hid a problem.** If the threshold keeps 95% of known tigers recognized, about **half of new tigers get accepted as known**. Those are false yes's, the costly mistake. That holds for unseen zoo tigers and for 269 wild camera-trap tigers from Rajaji (India).
 - **Why:** a few known-tiger photos show a side or view that isn't in the gallery (rear, frontal, behind a fence). Nothing can match stripes that aren't visible, so these look "new" and drag the threshold up. A much better learned matcher (LightGlue) didn't fix it: [06-local-matching.md](06-local-matching.md).
 - **What's left to decide (D26):** pick the threshold by an acceptable false-yes rate (e.g. 5%: about 69% of known tigers recognized automatically, the rest checked by a person). Then run the test set once.
 
+
+## 11. The test run (Nov 20): validation misled us
+Thresholds were set per D26 (5% and 10% false-yes targets on val), then the test set was run **once per training run** (seeds 0, 1, 2). Full table: [`results/summary.md`](../../results/summary.md).
+
+| | val (seed 0) | test (3 runs) |
+|---|---|---|
+| rank-1 | 82% | 60 ± 4% |
+| mAP | 0.82 | 0.61 ± 0.01 |
+| new-tiger AUROC | 0.88 | 0.50 ± 0.02 (chance) |
+| new tigers accepted at the "5%" threshold | 5% | 74% |
+
+- **Recognizing known tigers held up:** mAP 0.61 vs 0.30–0.38 for off-the-shelf models, and 83–87% right when the system answers on its own.
+- **Spotting new tigers did not:** at chance on test, below SIFT alone (0.64). The val thresholds don't transfer.
+- **Likely cause:** every new-tiger choice (D18–D27) was made on 46 photos of 7 held-out tigers. That's too few to choose from. Test has 19 photos of 6 tigers, so its estimate is noisy too, but all three runs agree.
+- **What this means:** the test numbers are the reported result. Any fix needs a different way of choosing (more held-out tigers, fewer knobs) and a fresh held-out set, since this test set has now been seen.

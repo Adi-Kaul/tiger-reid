@@ -32,34 +32,49 @@ camera-trap photo
 
 Steps 2 and 3 are the research. The rest uses existing tools.
 
-## Results so far
+## Results
 
-All numbers below are on the **validation set**: 67 photos of known tigers and 46 photos of tigers held out of training entirely. The final test set is deliberately still untouched. It gets run once, after every choice is locked in, so the reported numbers can't have been tuned on it.
+**Short version:** the trained model is good at recognizing tigers it already knows, but it can't yet tell when a tiger is new. Every choice was tuned on a validation set that turned out to be too small, and the test set showed it.
+
+Final numbers are on the **test set**, run once per training run (3 runs, mean ± sd) after every choice was locked in on validation: 91 photos of 47 known tigers, and 19 photos of 6 tigers kept out of training entirely. The model learns 86 tigers from about 1,400 zoo photos.
 
 | Approach | Right tiger is the top match | Ranking quality (mAP) | Spotting new tigers (AUROC) |
 |---|---|---|---|
-| Classic stripe matching (SIFT, no learning) | 45% | 0.24 | 0.83 |
-| Off-the-shelf image model, no tiger training | 58% | 0.31 | 0.52 |
-| ResNet50 trained on tigers | 70% | 0.69 | 0.75 |
-| DINOv2 ViT-B trained on tigers (mean of 4 runs) | **81%** | **0.78** | 0.80 |
-| ViT-B + new-tiger scoring with a stripe-matching re-check (1 run) | 82% | 0.82 | **0.88** |
+| Off-the-shelf ResNet50, no tiger training | 43% | 0.30 | 0.63 |
+| Off-the-shelf DINOv2-S, no tiger training | 51% | 0.38 | 0.53 |
+| Classic stripe matching (SIFT, no learning) | 54% | 0.31 | **0.64** |
+| DINOv2 ViT-B trained on tigers + new-tiger scoring (3 runs) | **60 ± 4%** | **0.61** | 0.50 ± 0.02 |
 
-AUROC is the chance that a new tiger looks "newer" than a known one: 0.5 is a coin flip, 1.0 is perfect. The model learns 86 tigers from about 1,400 zoo photos.
+AUROC is the chance that a new tiger looks "newer" than a known one: 0.5 is a coin flip, 1.0 is perfect.
 
-**The finding I care most about.** A high AUROC hid a real problem. If the system is tuned to recognize 95% of known tigers, about half of new tigers get wrongly accepted as known ones. That held for unseen zoo tigers and for 269 wild camera-trap photos from Rajaji National Park in India. That mistake merges two animals into one and corrupts a population count.
+- **What held up:** training on tigers roughly doubles ranking quality over off-the-shelf models (mAP 0.61 vs 0.30–0.38). When the system is confident enough to answer on its own, it names the right tiger 83–87% of the time. About half of known-tiger photos get answered automatically; the rest go to a person.
+- **What didn't:** spotting new tigers is at chance, below plain stripe matching. A threshold set on validation to let 5% of new tigers through let **74%** through on test. In a real survey that merges two animals into one and corrupts the population count.
 
-I traced it to a handful of known-tiger photos taken from angles the database doesn't cover: from behind, head-on, or through a fence. No matching method can line up stripes that aren't visible, so those photos look "new". Keeping them recognized forces a lenient threshold, and new tigers slip through. I tried two fixes, a distance-based score and a modern learned matcher (LightGlue). Both are reported as not helping. The practical answer is to set the threshold by an acceptable rate of false matches and send uncertain photos to a person. At a 5% false-match rate, about 69% of known tigers are recognized automatically.
+### Validation said otherwise
+
+The same pipeline looked much better on validation, where every choice was made:
+
+| | Validation (1 run) | Test (3 runs) |
+|---|---|---|
+| Right tiger is the top match | 82% | 60% |
+| Ranking quality (mAP) | 0.82 | 0.61 |
+| Spotting new tigers (AUROC) | 0.88 | 0.50 |
+| New tigers accepted at the "5%" threshold | 5% | 74% |
+
+Every new-tiger choice was made on 46 photos of only 7 held-out tigers. With so few, a pipeline can look reliable on validation and still not generalize. The test set is just as small (19 photos of 6 tigers, AUROC 95% CI 0.37–0.59), but all three runs agree. The test numbers above stay as reported. Working out why validation misled me is the next step.
+
+**Along the way (validation only):** error analysis traced many false matches to known-tiger photos taken from angles the database doesn't cover (from behind, head-on, through a fence). A distance-based score, a modern learned matcher (LightGlue) and masking out the background all failed to help. Masking showed that part of stripe matching's signal was actually the zoo enclosure in the background, which won't carry over to the wild.
 
 ## How I approached it
 
 - **Honest evaluation first.** The dataset's photos are video frames, and near-identical frames in both training and testing inflate scores. The video information was lost in the public release, so I rebuilt approximate "clips" from image similarity and split by tiger and by clip, never by frame.
-- **Decisions written down before results.** Every choice that could shape a number goes into a [decision log](docs/decisions.md) (26 entries) with the reasoning and the alternatives. New ideas are listed with a pass/fail rule before they're run, so I can't pick the winner after the fact.
-- **Failures stay in.** Higher resolution, extra regularization, distance-based scoring and the learned matcher all failed to help, and they're reported with their numbers.
+- **Decisions written down before results.** Every choice that could shape a number goes into a [decision log](docs/decisions.md) (27 entries) with the reasoning and the alternatives. New ideas are listed with a pass/fail rule before they're run, so I can't pick the winner after the fact.
+- **Failures stay in.** Higher resolution, extra regularization, distance-based scoring, the learned matcher and background masking all failed to help, and they're reported with their numbers. So is the test result.
 - **Protecting the animals.** Tiger locations are valuable to poachers. No real coordinates go in this repo, and any map shows activity per 5 km grid cell, not per tiger.
 
 ## Stack
 
-Python, PyTorch, [timm](https://github.com/huggingface/pytorch-image-models) (DINOv2 ViT-B backbone), [pytorch-metric-learning](https://github.com/KevinMusgrave/pytorch-metric-learning) (ArcFace loss), OpenCV (SIFT + RANSAC), [kornia](https://github.com/kornia/kornia) (DISK + LightGlue), scikit-learn, pandas, pytest (55 tests). Training runs on Google Colab GPUs (T4). Evaluation runs locally on Apple Silicon (MPS).
+Python, PyTorch, [timm](https://github.com/huggingface/pytorch-image-models) (DINOv2 ViT-B backbone), [pytorch-metric-learning](https://github.com/KevinMusgrave/pytorch-metric-learning) (ArcFace loss), OpenCV (SIFT + RANSAC), [kornia](https://github.com/kornia/kornia) (DISK + LightGlue), scikit-learn, pandas, pytest (61 tests). Training runs on Google Colab GPUs (T4). Evaluation runs locally on Apple Silicon (MPS).
 
 ## Repo tour
 
@@ -96,8 +111,8 @@ Training: `scripts/train.py` with a config from `configs/`, or `notebooks/colab_
 
 ## Status
 
-- **Done:** leakage-safe splits, evaluation, baselines, trained models, new-tiger scoring, the wild-photo check.
-- **Next:** pick the threshold rule, run the test set once across 3 training runs, then robustness to wild conditions (night infrared, blur, partial bodies), detection, and the map.
+- **Done:** leakage-safe splits, evaluation, baselines, trained models, new-tiger scoring, the wild-photo check, the one-time test run (3 training runs).
+- **Next:** work out why validation and test disagree, then fix how new-tiger choices are made (more held-out tigers to choose with, fewer tuned knobs) and check it on a fresh held-out set. After that: robustness to wild conditions (night infrared, blur, partial bodies), detection, and the map.
 - **Longer term:** real wild data with known identities from Indian field teams. Without it, these results remain a zoo-to-wild estimate.
 
 Plan: [docs/roadmap.md](docs/roadmap.md).
@@ -108,3 +123,5 @@ Plan: [docs/roadmap.md](docs/roadmap.md).
 - **Rajaji National Park camera-trap database** (Wildlife Institute of India, via GBIF), CC BY-NC 4.0, [doi:10.15468/tc8f8r](https://doi.org/10.15468/tc8f8r).
 
 Both are non-commercial. Full credits and citations: [docs/acknowledgments.md](docs/acknowledgments.md).
+
+The code is MIT-licensed ([LICENSE](LICENSE)). Dataset images that appear in this repo (notebook outputs, `results/pseudo_clips/`) stay under the ATRW license, CC BY-NC-SA 4.0.

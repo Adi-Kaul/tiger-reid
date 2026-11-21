@@ -24,6 +24,7 @@ Closed-set still beats every baseline (SIFT 54%, pretrained DINOv2 51%), but ope
 1. Diagnose the val→test gap **without changing reported numbers** (post-hoc, labeled as such): compare val vs test entities/clips/image types, per-entity errors, whether the test unknowns resemble specific knowns, how small val (46 imgs / 7 tigers) let D18–D27 overfit.
 2. Write up Phase 4 honestly with the test table as is. Then check with the user before Phase 5.
 3. Optional: clip-level queries as a separate setting.
+4. Going public (Nov 20): README now leads with the test result, MIT LICENSE added, personal account details and private correspondence trimmed from docs. Flip to public only after the user confirms.
 
 **Known data issues:** val unknowns = 46 images of only **7 tigers**; test unknowns = 19 images of 6 tigers. openset_val entity 250 looks like a mislabeled image of known 247 (kept in, D25 note). Wild Rajaji labeling (D23) is **parked**.
 
@@ -40,8 +41,8 @@ python scripts/summarize_results.py                                             
 ```
 Checkpoints `dinov2b_s{0,1,2}.pt` are all in `checkpoints/` (seed 1 = 17:58 run, epoch 7, verified).
 
-**Accounts / compute:** use adikaul07@gmail.com for everything (Drive, Colab, Gmail, git). Training on Colab T4; local `mps` for eval. Weights: adikaul07 Drive `MyDrive/tiger-reid-runs/`.
-**Wild data contacts (Nov 12–14):** Harihar (Panthera) pointed to GBIF only; full set needs WII permission. GBIF Rajaji: 269/305 images cached, no individual IDs. Records carry fine coordinates: never commit them.
+**Accounts / compute:** use the personal Google/GitHub account for everything (Drive, Colab, git). Training on Colab T4; local `mps` for eval. Weights: personal Drive `MyDrive/tiger-reid-runs/`.
+**Wild data contacts (Nov 12–14):** a Panthera researcher pointed me to the public GBIF dataset. GBIF Rajaji: 269/305 images cached, no individual IDs. Records carry fine coordinates: never commit them.
 
 ---
 
@@ -162,12 +163,12 @@ Checkpoints `dinov2b_s{0,1,2}.pt` are all in `checkpoints/` (seed 1 = 17:58 run,
 ## Nov 14, 2026 (Sat) — wild-data reply
 
 **Done**
-- Read Abishek Harihar's reply (Panthera): use the GBIF dataset; missing images need WII permission.
+- Reply from Panthera: pointed me to the public GBIF dataset.
 - Probed GBIF dataset `e61455a4-…`: 305 records, all with one image; **0 individual IDs**; 269 images still served from GBIF's image cache at full 1024×768, 36 not (504, origin `ibif.gov.in` down).
 
 **Findings**
 - Usable as an *unlabeled* zoo→wild set, not a re-ID benchmark as-is. Weak labels: sex (cross-sex pairs are certainly different tigers), camera station + time (same-camera bursts are almost surely the same tiger).
-- The IDs exist in Harihar's own population work, so a catalogNumber → tiger-ID table (no images needed) is the cheapest thing to ask for.
+- A catalogNumber → tiger-ID table from the dataset authors (no images needed) would be the cheapest thing to ask for.
 
 **Next**
 - **Later (D23):** fetched 269 images (`scripts/fetch_wild_rajaji.py`), cropped them with a COCO detector (224/269 boxes >0.5), and Claude noted flank and quality for each: 87 left / 64 right usable, 12 frontal, 106 unusable (dark, blur, partial, multi-tiger). Proposals: 133 groups, only 15 with 2+ images (event groups + 7 visual merges incl. 4 images with biologist circle marks). Most cross-event matching is left to the user: Claude's stripe matching at these resolutions was too uncertain to merge more.
@@ -178,8 +179,8 @@ Checkpoints `dinov2b_s{0,1,2}.pt` are all in `checkpoints/` (seed 1 = 17:58 run,
 ## Nov 13, 2026 (Fri) — B2 (336 px) and B3 (ViT-B)
 
 **Done**
-- **B2 `dinov2s_336` (D22): plain DINOv2-S at 336×336, fp16, seed 0, T4 (adikaul07 Colab).** Best epoch 13, early-stopped at 21, 60 s/epoch (vs 36 s at 224), 21 min.
-- **B3 `dinov2b` (D22): DINOv2 ViT-B/14, plain settings, 224, backbone lr 2e-5, fp16, seed 0, T4.** Best epoch 11, early-stopped at 19, 53 s/epoch, 17 min. Weights 345 MB in the adikaul07 Drive `tiger-reid-runs/dinov2b_s0_20261113-0637/`.
+- **B2 `dinov2s_336` (D22): plain DINOv2-S at 336×336, fp16, seed 0, T4 (personal Colab).** Best epoch 13, early-stopped at 21, 60 s/epoch (vs 36 s at 224), 21 min.
+- **B3 `dinov2b` (D22): DINOv2 ViT-B/14, plain settings, 224, backbone lr 2e-5, fp16, seed 0, T4.** Best epoch 11, early-stopped at 19, 53 s/epoch, 17 min. Weights 345 MB in the personal Drive `tiger-reid-runs/dinov2b_s0_20261113-0637/`.
 
 | method (val) | rank-1 | rank-5 | mAP | AUROC | AUROC (all) | best ep | last-8-ep mean mAP / rank-1 / AUROC |
 |---|---|---|---|---|---|---|---|
@@ -197,7 +198,7 @@ Checkpoints `dinov2b_s{0,1,2}.pt` are all in `checkpoints/` (seed 1 = 17:58 run,
 - It overfits the same way as the plain 224 run (train loss 0.02 by epoch 19) and peaks around epochs 11–13 like it. So the limit is the 86 training tigers, not image detail.
 - **Pattern so far:** every DINOv2-S variant levels off at val mAP ~0.70–0.72, and single-epoch peaks swing ±0.03. Picking configs by one peak on 67 queries is noisy, so the last-8-epoch mean is reported next to it.
 - Harmless warning with fp16: "lr_scheduler.step() before optimizer.step()". GradScaler skips the first optimizer step while it calibrates the loss scale, which only drops the first LR value of warmup.
-- Log: `results/train_logs/dinov2s_336_s0.csv`; weights in the adikaul07 Drive `MyDrive/tiger-reid-runs/dinov2s_336_s0_20261113-0044/`.
+- Log: `results/train_logs/dinov2s_336_s0.csv`; weights in the personal Drive `MyDrive/tiger-reid-runs/dinov2s_336_s0_20261113-0044/`.
 
 - **ViT-B is the first change that clearly helps:** val mAP 0.819 vs 0.765 at the best epoch, and 0.748 vs 0.721 on the last-8-epoch average (rank-1 78% vs 73%). It wins by both views, not just one lucky epoch. CIs still overlap (one seed), so seeds 1–2 come next.
 - It learns faster (rank-1 82% by epoch 2) and memorizes faster (train loss 0.006 at epoch 19), so early stopping matters.
@@ -253,7 +254,7 @@ Checkpoints `dinov2b_s{0,1,2}.pt` are all in `checkpoints/` (seed 1 = 17:58 run,
 - Gains over ResNet50 (+6 rank-1, +0.07 mAP) are inside the CIs for one seed; AUROC is a tie. Promising, not yet proven.
 - Problem → fix: exposed GitHub token in a git error (token revoked/replaced); notebook now passes it via a credential helper, and resets a reused runtime to `origin/main` instead of pulling.
 
-**B1 `dinov2s_reg` (D19): DINOv2-S + RandomErasing + crop scale 0.5–1 + drop-path 0.1, seed 0, T4 (adikaul07 Colab), 30 epochs, 19.5 min**
+**B1 `dinov2s_reg` (D19): DINOv2-S + RandomErasing + crop scale 0.5–1 + drop-path 0.1, seed 0, T4 (personal Colab), 30 epochs, 19.5 min**
 
 | method (val) | rank-1 | rank-5 | mAP | AUROC | AUROC (all) | best ep | last-8-ep mean mAP / rank-1 / AUROC |
 |---|---|---|---|---|---|---|---|
@@ -263,11 +264,11 @@ Checkpoints `dinov2b_s{0,1,2}.pt` are all in `checkpoints/` (seed 1 = 17:58 run,
 - **Regularization stopped the memorizing** (train loss 1.8 at epoch 30 vs 0.02 at epoch 19) **but didn't improve val.** It learns more slowly (mAP 0.58 vs 0.69 at epoch 8), then **plateaus at ~0.72 from epoch 19**, so more epochs wouldn't help.
 - **The first DINOv2 run's 0.765 was a one-epoch spike.** Averaged over each run's last 8 epochs, mAP is tied (0.721 vs 0.718). B1's curve is smooth, so its number is less inflated by picking the best epoch.
 - **Rank-1 is clearly worse** (−10 pts at the chosen epoch, −8 pts on the last-8 average; flat at 65.7% for the last 10 epochs). Open-set AUROC is +0.03 matched / −0.04 all-unknowns: no real change.
-- By the D13/D19 rule (val mAP), **B1 loses; the plain DINOv2-S config stays the base.** Log: `results/train_logs/dinov2s_reg_s0.csv`; weights in the adikaul07 Drive `MyDrive/tiger-reid-runs/dinov2s_reg_s0_20261112-2346/`.
+- By the D13/D19 rule (val mAP), **B1 loses; the plain DINOv2-S config stays the base.** Log: `results/train_logs/dinov2s_reg_s0.csv`; weights in the personal Drive `MyDrive/tiger-reid-runs/dinov2s_reg_s0_20261112-2346/`.
 - B2/B3 switched to the plain settings (`dinov2s_336`, `dinov2b`; D22).
 
 **Problems → fixes**
-- Drive connector was on the umich account → switched to adikaul07, so run folders can now be read directly.
+- Drive connector was on the university account → switched to the personal one, so run folders can now be read directly.
 - "Notebook not found" from the GitHub link (private repo) → uploaded the notebook to Drive.
 - pml 3.0 on Colab turned `MPerClassSampler` into a batch sampler (`length_before_new_iter` gone) → pin 2.9.0 + version guard.
 - Drive auth pop-up timed out after training; then the runtime was recycled and the run lost → mount Drive at the start.
